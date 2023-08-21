@@ -176,7 +176,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     // store pid
     b_.CreateStore(
-        b_.CreateTrunc(b_.CreateGetPidTgid(loc), b_.getInt32Ty()),
+        b_.CreateGetPid(loc),
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     // store probe id
     b_.CreateStore(
@@ -226,17 +226,13 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     kstack_ustack(builtin.ident, builtin.type.stack_type, builtin.loc);
   }
-  else if (builtin.ident == "pid" || builtin.ident == "tid")
+  else if (builtin.ident == "pid")
   {
-    Value *pidtgid = b_.CreateGetPidTgid(builtin.loc);
-    if (builtin.ident == "pid")
-    {
-      expr_ = b_.CreateLShr(pidtgid, 32);
-    }
-    else if (builtin.ident == "tid")
-    {
-      expr_ = b_.CreateAnd(pidtgid, 0xffffffff);
-    }
+    expr_ = b_.CreateGetPid(builtin.loc);
+  }
+  else if (builtin.ident == "tid")
+  {
+    expr_ = b_.CreateGetTid(builtin.loc);
   }
   else if (builtin.ident == "cgroup")
   {

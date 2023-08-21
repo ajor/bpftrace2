@@ -217,6 +217,8 @@ public:
   void        CreateHelperError(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc);
   void        CreateHelperErrorCond(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc, bool compare_zero=false);
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
+  Value *CreateGetPid(const location &loc);
+  Value *CreateGetTid(const location &loc);
   AllocaInst *CreateUSym(llvm::Value *val, int probe_id, const location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
