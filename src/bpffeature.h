@@ -123,6 +123,7 @@ public:
   DEFINE_HELPER_TEST(probe_read_kernel, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(probe_read_user_str, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(probe_read_kernel_str, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(get_ns_current_pid_tgid, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(ktime_get_boot_ns, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(ktime_get_tai_ns, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(get_func_ip, libbpf::BPF_PROG_TYPE_TRACING);
