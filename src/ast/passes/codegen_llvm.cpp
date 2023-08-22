@@ -176,7 +176,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     // store pid
     b_.CreateStore(
-        b_.CreateGetPid(loc),
+        b_.CreateGetPid(ctx_, loc),
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     // store probe id
     b_.CreateStore(
@@ -228,11 +228,11 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "pid")
   {
-    expr_ = b_.CreateGetPid(builtin.loc);
+    expr_ = b_.CreateGetPid(ctx_, builtin.loc);
   }
   else if (builtin.ident == "tid")
   {
-    expr_ = b_.CreateGetTid(builtin.loc);
+    expr_ = b_.CreateGetTid(ctx_, builtin.loc);
   }
   else if (builtin.ident == "cgroup")
   {
@@ -319,7 +319,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     if (builtin.type.IsUsymTy())
     {
-      expr_ = b_.CreateUSym(expr_, get_probe_id(), builtin.loc);
+      expr_ = b_.CreateUSym(ctx_, expr_, get_probe_id(), builtin.loc);
       Value *expr = expr_;
       expr_deleter_ = [this, expr]() { b_.CreateLifetimeEnd(expr); };
     }
@@ -862,7 +862,7 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "usym")
   {
     auto scoped_del = accept(call.vargs->front());
-    expr_ = b_.CreateUSym(expr_, get_probe_id(), call.loc);
+    expr_ = b_.CreateUSym(ctx_, expr_, get_probe_id(), call.loc);
   }
   else if (call.func == "ntop")
   {

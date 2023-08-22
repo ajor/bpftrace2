@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <sys/stat.h>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -162,6 +163,9 @@ public:
   virtual bool is_traceable_func(const std::string &func_name) const;
   virtual std::unordered_set<std::string> get_func_modules(
       const std::string &func_name) const;
+  virtual const struct stat &get_pidns_self_stat() const; // TODO needs to be
+                                                          // virtual?
+
   int create_pcaps(void);
   void close_pcaps(void);
   bool write_pcaps(uint64_t id, uint64_t ns, uint8_t *pkt, unsigned int size);
