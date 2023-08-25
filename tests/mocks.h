@@ -82,6 +82,15 @@ public:
     return { "mock_vmlinux" };
   }
 
+  const struct stat &get_pidns_self_stat() const override
+  {
+    static struct stat rootPidNamespace = {.st_ino = 0xeffffffc};
+    static struct stat childPidNamespace = {.st_ino = 0xf0000011};
+
+    // TODO feature detection
+    return rootPidNamespace;
+  }
+
   void set_mock_probe_matcher(std::unique_ptr<MockProbeMatcher> probe_matcher)
   {
     probe_matcher_ = std::move(probe_matcher);
@@ -115,6 +124,7 @@ public:
     has_ktime_get_tai_ns_ = std::make_optional<bool>(has_features);
     has_get_func_ip_ = std::make_optional<bool>(has_features);
     has_jiffies64_ = std::make_optional<bool>(has_features);
+    has_get_ns_current_pid_tgid_ = std::make_optional<bool>(has_features);
   };
 
   void has_loop(bool has)

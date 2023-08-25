@@ -10,12 +10,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
     -P ${CMAKE_SOURCE_DIR}/tests/codegen/generate_codegen_includes.cmake
   DEPENDS ${CODEGEN_SOURCES})
 
-if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 12)
   set(CODEGEN_SRC ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
-else()
-  set(CODEGEN_SRC "")
-  message(STATUS "Disabled codegen test for LLVM != 12")
-endif()
 
 add_executable(bpftrace_test
   ast.cpp
