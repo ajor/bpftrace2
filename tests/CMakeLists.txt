@@ -1,4 +1,4 @@
-add_compile_options("-Werror=undef")
+add_compile_options("-Wno-undef") # For vendored GTest
 
 # Regenerate codegen_includes.cpp whenever anything in the tests/codegen
 # directory changes
