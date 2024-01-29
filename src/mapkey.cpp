@@ -98,8 +98,8 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       return bpftrace.resolve_ksym(read_data<uint64_t>(data));
     case Type::usym:
       return bpftrace.resolve_usym(read_data<uint64_t>(data),
-                                   read_data<uint64_t>(arg_data + 8),
-                                   read_data<uint64_t>(arg_data + 16));
+                                   read_data<int32_t>(arg_data + 8),
+                                   read_data<int32_t>(arg_data + 12));
     case Type::inet:
       return bpftrace.resolve_inet(read_data<int64_t>(data),
                                    (const uint8_t *)(arg_data + 8));

@@ -125,16 +125,16 @@ public:
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);
   std::string get_stack(int64_t stackid,
-                        int pid,
-                        int probe_id,
+                        int32_t pid,
+                        int32_t probe_id,
                         bool ustack,
                         StackType stack_type,
                         int indent = 0);
   std::string resolve_buf(char *buf, size_t size);
   std::string resolve_ksym(uint64_t addr, bool show_offset = false);
   std::string resolve_usym(uint64_t addr,
-                           int pid,
-                           int probe_id,
+                           int32_t pid,
+                           int32_t probe_id,
                            bool show_offset = false,
                            bool show_module = false);
   std::string resolve_inet(int af, const uint8_t *inet) const;

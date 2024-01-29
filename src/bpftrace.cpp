@@ -792,8 +792,8 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
       case Type::usym:
         arg_values.push_back(std::make_unique<PrintableString>(resolve_usym(
             *reinterpret_cast<uint64_t *>(arg_data + arg.offset),
-            *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
-            *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 16))));
+            *reinterpret_cast<int32_t *>(arg_data + arg.offset + 8),
+            *reinterpret_cast<int32_t *>(arg_data + arg.offset + 12))));
         break;
       case Type::inet:
         arg_values.push_back(
@@ -1981,8 +1981,8 @@ std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
 }
 
 std::string BPFtrace::get_stack(int64_t stackid,
-                                int pid,
-                                int probe_id,
+                                int32_t pid,
+                                int32_t probe_id,
                                 bool ustack,
                                 StackType stack_type,
                                 int indent)
@@ -2314,8 +2314,8 @@ std::string BPFtrace::resolve_inet(int af, const uint8_t* inet) const
 }
 
 std::string BPFtrace::resolve_usym(uint64_t addr,
-                                   uint32_t pid,
-                                   uint32_t probe_id,
+                                   int32_t pid,
+                                   int32_t probe_id,
                                    bool show_offset,
                                    bool show_module)
 {
