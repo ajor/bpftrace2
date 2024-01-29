@@ -436,7 +436,7 @@ SizedType CreateHist()
 
 SizedType CreateUSym()
 {
-  return SizedType(Type::usym, 24);
+  return SizedType(Type::usym, 16);
 }
 
 SizedType CreateKSym()

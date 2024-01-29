@@ -176,7 +176,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     // store pid
     b_.CreateStore(
-        b_.CreateGetPid(ctx_, loc),
+        b_.CreateGetPid(ctx_, loc), // TODO This used to be tid not pid?
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     // store probe id
     b_.CreateStore(

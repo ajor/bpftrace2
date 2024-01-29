@@ -102,7 +102,7 @@ Value *IRBuilderBPF::CreateGetPid(Value *ctx, const location &loc)
 
   // Get global target PID when we're in the root namespace
   Value *pidtgid = CreateGetPidTgid(loc);
-  Value *pid = CreateLShr(pidtgid, 32, "pid");
+  Value *pid = CreateTrunc(CreateLShr(pidtgid, 32), getInt32Ty(), "pid");
   return pid;
 }
 
@@ -122,7 +122,7 @@ Value *IRBuilderBPF::CreateGetTid(Value *ctx, const location &loc)
 
   // Get global target TID when we're in the root namespace
   Value *pidtgid = CreateGetPidTgid(loc);
-  Value *tid = CreateAnd(pidtgid, 0xffffffff, "tid");
+  Value *tid = CreateTrunc(pidtgid, getInt32Ty(), "tid");
   return tid;
 }
 
@@ -133,8 +133,8 @@ AllocaInst *IRBuilderBPF::CreateUSym(Value *ctx,
 {
   std::vector<llvm::Type *> elements = {
     getInt64Ty(), // addr
-    getInt64Ty(), // pid
-    getInt64Ty(), // probe id
+    getInt32Ty(), // pid
+    getInt32Ty(), // probe id
   };
   StructType *usym_t = GetStructType("usym_t", elements, false);
   AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");

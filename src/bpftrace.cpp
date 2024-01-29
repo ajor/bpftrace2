@@ -792,8 +792,8 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
       case Type::usym:
         arg_values.push_back(std::make_unique<PrintableString>(resolve_usym(
             *reinterpret_cast<uint64_t *>(arg_data + arg.offset),
-            *reinterpret_cast<uint64_t *>(arg_data + arg.offset + 8),
-            *reinterpret_cast<uint64_t *>(arg_data + arg.offset + 16))));
+            *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
+            *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 16))));
         break;
       case Type::inet:
         arg_values.push_back(
