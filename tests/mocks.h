@@ -84,11 +84,22 @@ public:
 
   const struct stat &get_pidns_self_stat() const override
   {
-    static struct stat rootPidNamespace = {.st_ino = 0xeffffffc};
-    static struct stat childPidNamespace = {.st_ino = 0xf0000011};
+    static const struct stat root_pid_namespace = []()
+    {
+      struct stat s{};
+      s.st_ino = 0xeffffffc;
+      return s;
+    }();
+    static const struct stat child_pid_namespace = []()
+    {
+      struct stat s{};
+      s.st_ino = 0xf0000011;
+      return s;
+    }();
 
-    // TODO feature detection
-    return rootPidNamespace;
+    if (in_root_pid_ns)
+      return root_pid_namespace;
+    return child_pid_namespace;
   }
 
   void set_mock_probe_matcher(std::unique_ptr<MockProbeMatcher> probe_matcher)
@@ -98,6 +109,7 @@ public:
   }
 
   MockProbeMatcher *mock_probe_matcher;
+  bool in_root_pid_ns = true;
 };
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
