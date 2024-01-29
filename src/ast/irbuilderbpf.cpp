@@ -140,8 +140,8 @@ AllocaInst *IRBuilderBPF::CreateUSym(Value *ctx,
   AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");
 
   Value *pid = CreateGetPid(ctx, loc);
-  Value *probe_id_val = Constant::getIntegerValue(getInt64Ty(),
-                                                  APInt(64, probe_id));
+  Value *probe_id_val = Constant::getIntegerValue(getInt32Ty(),
+                                                  APInt(32, probe_id));
 
   // The extra 0 here ensures the type of addr_offset will be int64
   Value *addr_offset = CreateGEP(usym_t, buf, { getInt64(0), getInt32(0) });

@@ -2314,8 +2314,8 @@ std::string BPFtrace::resolve_inet(int af, const uint8_t* inet) const
 }
 
 std::string BPFtrace::resolve_usym(uint64_t addr,
-                                   int pid,
-                                   int probe_id,
+                                   uint32_t pid,
+                                   uint32_t probe_id,
                                    bool show_offset,
                                    bool show_module)
 {

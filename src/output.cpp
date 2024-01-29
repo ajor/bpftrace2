@@ -232,9 +232,9 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
   else if (type.IsKsymTy())
     return bpftrace.resolve_ksym(read_data<uintptr_t>(value.data()));
   else if (type.IsUsymTy())
-    return bpftrace.resolve_usym(read_data<uintptr_t>(value.data()),
-                                 read_data<uintptr_t>(value.data() + 8),
-                                 read_data<uint64_t>(value.data() + 16));
+    return bpftrace.resolve_usym(read_data<uint64_t>(value.data()),
+                                 read_data<uint32_t>(value.data() + 8),
+                                 read_data<uint32_t>(value.data() + 16));
   else if (type.IsInetTy())
     return bpftrace.resolve_inet(read_data<uint64_t>(value.data()),
                                  (uint8_t *)(value.data() + 8));
