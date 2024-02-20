@@ -11,9 +11,7 @@ jobs:
   clang-format:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
+    - uses: actions/checkout@v4
     - name: Install clang-format
       run: sudo apt-get install clang-format
     - name: Download git-clang-format
@@ -112,7 +110,7 @@ jobs:
           RUN_MEMLEAK_TEST: 1
           RUN_TESTS: 0
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - uses: DeterminateSystems/nix-installer-action@v4
     - uses: DeterminateSystems/magic-nix-cache-action@v2
     - name: Load kernel modules
@@ -123,6 +121,8 @@ jobs:
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py
+    - name: Code Coverage
+      run: codecov/codecov-action@v3.1.4
 
   irc:
     # Notify IRC of build failures on pushes only if we are running from
