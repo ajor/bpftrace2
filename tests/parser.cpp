@@ -281,33 +281,32 @@ TEST(Parser, positional_param_attachpoint)
 )PROG");
 
   // TODO what are these tests meant to be checking for?
-  // Error location is incorrect: #3063
-  // - The range should be 1-18, not 1-19
   test_parse_failure(bpftrace, R"(uprobe:$1a" { 1 })", R"(
-stdin:1:1-19: ERROR: unterminated string
+stdin:1:1-18: ERROR: unterminated string
 uprobe:$1a" { 1 }
 ~~~~~~~~~~~~~~~~~
-stdin:1:1-19: ERROR: unexpected end of file, expected {
+stdin:1:1-18: ERROR: unexpected end of file, expected {
 uprobe:$1a" { 1 }
 ~~~~~~~~~~~~~~~~~
 )");
   test_parse_failure(bpftrace, R"(uprobe:$a" { 1 })", R"(
-stdin:1:1-11: ERROR: syntax error, unexpected variable, expecting {
+stdin:1:1-10: ERROR: syntax error, unexpected variable, expecting {
 uprobe:$a" { 1 }
-~~~~~~~~~~
+~~~~~~~~~
 )");
+  // TODO these error locations are wrong:
   test_parse_failure(bpftrace, R"(uprobe:$-1" { 1 })", R"(
-stdin:1:1-10: ERROR: invalid character '$'
+stdin:1:1-9: ERROR: invalid character '$'
+uprobe:$-1" { 1 }
+~~~~~~~~
+stdin:1:1-10: ERROR: syntax error, unexpected -, expecting {
 uprobe:$-1" { 1 }
 ~~~~~~~~~
-stdin:1:1-11: ERROR: syntax error, unexpected -, expecting {
-uprobe:$-1" { 1 }
-~~~~~~~~~~
 )");
   test_parse_failure(bpftrace, R"(uprobe:$999999999999999999999999" { 1 })", R"(
-stdin:1:1-34: ERROR: param $999999999999999999999999 is out of integer range [1, 9223372036854775807]
+stdin:1:1-33: ERROR: param $999999999999999999999999 is out of integer range [1, 9223372036854775807]
 uprobe:$999999999999999999999999" { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 
@@ -2214,11 +2213,10 @@ stdin:1:1-1: ERROR: No attach points for probe
 ::k::vfs_open:: { 1 }
 
 )");
-  // Error location is incorrect: #3063
   test_parse_failure("k:vfs_open:: { 1 }", R"(
-stdin:1:1-14: ERROR: kprobe probe type requires 1 or 2 arguments, found 3
+stdin:1:1-13: ERROR: kprobe probe type requires 1 or 2 arguments, found 3
 k:vfs_open:: { 1 }
-~~~~~~~~~~~~~
+~~~~~~~~~~~~
 )");
   test_parse_failure(":w:0x10000000:8:rw { 1 }", R"(
 stdin:1:1-1: ERROR: No attach points for probe
@@ -2516,11 +2514,10 @@ TEST(Parser, subprog_void_no_args)
 
 TEST(Parser, subprog_invalid_return_type)
 {
-  // Error location is incorrect: #3063
   test_parse_failure("fn f(): nonexistent {}", R"(
-stdin:1:9-21: ERROR: syntax error, unexpected identifier, expecting struct or integer type or builtin type or sized type
+stdin:1:9-20: ERROR: syntax error, unexpected identifier, expecting struct or integer type or builtin type or sized type
 fn f(): nonexistent {}
-        ~~~~~~~~~~~~
+        ~~~~~~~~~~~
 )");
 }
 
@@ -2568,11 +2565,10 @@ TEST(Parser, subprog_enum_arg)
 
 TEST(Parser, subprog_invalid_arg)
 {
-  // Error location is incorrect: #3063
   test_parse_failure("fn f($x : invalid): void {}", R"(
-stdin:1:11-19: ERROR: syntax error, unexpected identifier, expecting struct or integer type or builtin type or sized type
+stdin:1:11-18: ERROR: syntax error, unexpected identifier, expecting struct or integer type or builtin type or sized type
 fn f($x : invalid): void {}
-          ~~~~~~~~
+          ~~~~~~~
 )");
 }
 
@@ -2630,12 +2626,11 @@ Program
      variable: $kv
 )");
 
-  // Error location is incorrect: #3063
   // No body
   test_parse_failure("BEGIN { for ($kv : @map) print($kv); }", R"(
-stdin:1:27-32: ERROR: syntax error, unexpected call, expecting {
+stdin:1:26-31: ERROR: syntax error, unexpected call, expecting {
 BEGIN { for ($kv : @map) print($kv); }
-                          ~~~~~
+                         ~~~~~
 )");
 
   // Map for decl

@@ -205,7 +205,7 @@ struct|union|enum       {
                           struct_type = yytext;
                           return Parser::make_STRUCT(loc);
                         }
-  .                     { unput(yytext[0]); yy_pop_state(yyscanner); }
+  .                     { yy_pop_state(yyscanner); unput(yytext[0]); loc.columns(-1); }
 }
 <STRUCT_AFTER_COLON>{
   "{"|","|")"           {

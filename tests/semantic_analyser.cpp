@@ -424,23 +424,20 @@ TEST(semantic_analyser, ternary_expressions)
   test("kprobe:f { pid < 10000 ? printf(\"lo\") : exit() }");
   test("kprobe:f { @x = pid < 10000 ? printf(\"lo\") : cat(\"/proc/uptime\") }",
        10);
-  // Error location is incorrect: #3063
   test_error("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", R"(
-stdin:1:12-50: ERROR: Ternary operator must return the same type: have 'integer' and 'none'
+stdin:1:12-49: ERROR: Ternary operator must return the same type: have 'integer' and 'none'
 kprobe:f { pid < 10000 ? 3 : cat("/proc/uptime") }
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
-  // Error location is incorrect: #3063
   test_error("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", R"(
-stdin:1:17-42: ERROR: Ternary operator must return the same type: have 'integer' and 'string'
+stdin:1:17-41: ERROR: Ternary operator must return the same type: have 'integer' and 'string'
 kprobe:f { @x = pid < 10000 ? 1 : "high" }
-                ~~~~~~~~~~~~~~~~~~~~~~~~~
+                ~~~~~~~~~~~~~~~~~~~~~~~~
 )");
-  // Error location is incorrect: #3063
   test_error("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", R"(
-stdin:1:17-40: ERROR: Ternary operator must return the same type: have 'string' and 'integer'
+stdin:1:17-39: ERROR: Ternary operator must return the same type: have 'string' and 'integer'
 kprobe:f { @x = pid < 10000 ? "lo" : 2 }
-                ~~~~~~~~~~~~~~~~~~~~~~~
+                ~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 
@@ -3141,28 +3138,25 @@ TEST(semantic_analyser, subprog_return)
   test("fn f(): void { return; }");
   test("fn f(): int64 { return 1; }");
 
-  // Error location is incorrect: #3063
   test_error("fn f(): void { return 1; }", R"(
-stdin:1:17-25: ERROR: Function f is of type void, cannot return int64
+stdin:1:16-24: ERROR: Function f is of type void, cannot return int64
 fn f(): void { return 1; }
-                ~~~~~~~~
+               ~~~~~~~~
 )");
-  // Error location is incorrect: #3063
   test_error("fn f(): int64 { return; }", R"(
-stdin:1:18-24: ERROR: Function f is of type int64, cannot return void
+stdin:1:17-23: ERROR: Function f is of type int64, cannot return void
 fn f(): int64 { return; }
-                 ~~~~~~
+                ~~~~~~
 )");
 }
 
 TEST(semantic_analyser, subprog_arguments)
 {
   test("fn f($a : int64): int64 { return $a; }");
-  // Error location is incorrect: #3063
   test_error("fn f($a : int64): str_t[16] { return $a; }", R"(
-stdin:1:33-42: ERROR: Function f is of type string[16], cannot return int64
+stdin:1:31-40: ERROR: Function f is of type string[16], cannot return int64
 fn f($a : int64): str_t[16] { return $a; }
-                                ~~~~~~~~~
+                              ~~~~~~~~~
 )");
 }
 
@@ -3181,16 +3175,15 @@ TEST(semantic_analyser, subprog_builtin)
   test("fn f(): uint64 { return nsecs; }");
 }
 
-TEST(semantic_analyser, subprog_buildin_disallowed)
+TEST(semantic_analyser, subprog_builtin_disallowed)
 {
-  // Error location is incorrect: #3063
   test_error("fn f(): int64 { return func; }", R"(
-stdin:1:25-29: ERROR: Builtin func not supported outside probe
+stdin:1:24-28: ERROR: Builtin func not supported outside probe
 fn f(): int64 { return func; }
-                        ~~~~
-stdin:1:18-29: ERROR: Function f is of type int64, cannot return none
+                       ~~~~
+stdin:1:17-28: ERROR: Function f is of type int64, cannot return none
 fn f(): int64 { return func; }
-                 ~~~~~~~~~~~
+                ~~~~~~~~~~~
 )");
 }
 
@@ -3388,31 +3381,28 @@ TEST(semantic_analyser, for_loop_map)
 
 TEST(semantic_analyser, for_loop_map_no_key)
 {
-  // Error location is incorrect: #3063
   test_error("BEGIN { @map = 1; for ($kv : @map) { } }", R"(
-stdin:1:30-35: ERROR: Maps used as for-loop expressions must have keys to iterate over
+stdin:1:30-34: ERROR: Maps used as for-loop expressions must have keys to iterate over
 BEGIN { @map = 1; for ($kv : @map) { } }
-                             ~~~~~
+                             ~~~~
 )");
 }
 
 TEST(semantic_analyser, for_loop_map_undefined)
 {
-  // Error location is incorrect: #3063
   test_error("BEGIN { for ($kv : @map) { } }", R"(
-stdin:1:20-25: ERROR: Undefined map: @map
+stdin:1:20-24: ERROR: Undefined map: @map
 BEGIN { for ($kv : @map) { } }
-                   ~~~~~
+                   ~~~~
 )");
 }
 
 TEST(semantic_analyser, for_loop_map_undefined2)
 {
-  // Error location is incorrect: #3063
   test_error("BEGIN { @map[0] = 1; for ($kv : @undef) { @map[$kv.0]; } }", R"(
-stdin:1:33-40: ERROR: Undefined map: @undef
+stdin:1:33-39: ERROR: Undefined map: @undef
 BEGIN { @map[0] = 1; for ($kv : @undef) { @map[$kv.0]; } }
-                                ~~~~~~~
+                                ~~~~~~
 )");
 }
 
@@ -3526,27 +3516,26 @@ stdin:6:7-16: ERROR: Undefined or undeclared variable: $kv
 
 TEST(semantic_analyser, for_loop_invalid_expr)
 {
-  // Error location is incorrect: #3063
   test_error("BEGIN { for ($x : $var) { } }", R"(
-stdin:1:19-24: ERROR: Loop expression must be a map
+stdin:1:19-23: ERROR: Loop expression must be a map
 BEGIN { for ($x : $var) { } }
-                  ~~~~~
+                  ~~~~
 )");
+  // TODO this error location is wrong:
   test_error("BEGIN { for ($x : 1+2) { } }", R"(
-stdin:1:19-22: ERROR: Loop expression must be a map
+stdin:1:19-21: ERROR: Loop expression must be a map
 BEGIN { for ($x : 1+2) { } }
-                  ~~~
+                  ~~
 )");
   test_error("BEGIN { for ($x : \"abc\") { } }", R"(
-stdin:1:19-25: ERROR: Loop expression must be a map
+stdin:1:19-24: ERROR: Loop expression must be a map
 BEGIN { for ($x : "abc") { } }
-                  ~~~~~~
+                  ~~~~~
 )");
 }
 
 TEST(semantic_analyser, for_loop_multiple_errors)
 {
-  // Error location is incorrect: #3063
   test_error(R"(
     BEGIN {
       $kv = 1;
@@ -3557,31 +3546,28 @@ TEST(semantic_analyser, for_loop_multiple_errors)
 stdin:4:11-15: ERROR: Loop declaration shadows existing variable: $kv
       for ($kv : 1) { }
           ~~~~
-stdin:4:18-20: ERROR: Loop expression must be a map
+stdin:4:18-19: ERROR: Loop expression must be a map
       for ($kv : 1) { }
-                 ~~
+                 ~
 )");
 }
 
 TEST(semantic_analyser, for_loop_control_flow)
 {
-  // Error location is incorrect: #3063
   test_error("BEGIN { @map[0] = 1; for ($kv : @map) { break; } }", R"(
-stdin:1:42-47: ERROR: 'break' statement is not allowed in a for-loop
+stdin:1:41-46: ERROR: 'break' statement is not allowed in a for-loop
 BEGIN { @map[0] = 1; for ($kv : @map) { break; } }
-                                         ~~~~~
+                                        ~~~~~
 )");
-  // Error location is incorrect: #3063
   test_error("BEGIN { @map[0] = 1; for ($kv : @map) { continue; } }", R"(
-stdin:1:42-50: ERROR: 'continue' statement is not allowed in a for-loop
+stdin:1:41-49: ERROR: 'continue' statement is not allowed in a for-loop
 BEGIN { @map[0] = 1; for ($kv : @map) { continue; } }
-                                         ~~~~~~~~
+                                        ~~~~~~~~
 )");
-  // Error location is incorrect: #3063
   test_error("BEGIN { @map[0] = 1; for ($kv : @map) { return; } }", R"(
-stdin:1:42-48: ERROR: 'return' statement is not allowed in a for-loop
+stdin:1:41-47: ERROR: 'return' statement is not allowed in a for-loop
 BEGIN { @map[0] = 1; for ($kv : @map) { return; } }
-                                         ~~~~~~
+                                        ~~~~~~
 )");
 }
 
