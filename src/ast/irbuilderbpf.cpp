@@ -1363,8 +1363,9 @@ CallInst *IRBuilderBPF::CreateGetFuncIp(Value *ctx, const location &loc)
 {
   // u64 bpf_get_func_ip(void *ctx)
   // Return:
-  // 		Address of the traced function.
+  // 		Address of the traced function for kprobe.
   //		0 for kprobes placed within the function (not at the entry).
+  //		Address of the probe for uprobe and return uprobe.
   FunctionType *getfuncip_func_type = FunctionType::get(getInt64Ty(),
                                                         { GET_PTR_TY() },
                                                         false);

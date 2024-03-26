@@ -265,7 +265,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     // probes placed within a function (not at the entry).
     auto probe_type = probetype(current_attach_point_->provider);
     if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc ||
-        probe_type == ProbeType::kretprobe) {
+        probe_type == ProbeType::kretprobe || probe_type == ProbeType::uretprobe) {
       expr_ = b_.CreateGetFuncIp(ctx_, builtin.loc);
     } else {
       expr_ = b_.CreateRegisterRead(ctx_, builtin.ident);

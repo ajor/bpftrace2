@@ -347,18 +347,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
             << "The func builtin can not be used with '"
             << attach_point->provider << "' probes";
 
-      if (type == ProbeType::uretprobe) {
-        // Disabled due to #2285
-        LOG(ERROR, builtin.loc, err_)
-            << "The 'func' builtin is not available for uretprobes. Consider "
-               "using 'probe' instead.";
-      }
-
-      if (type == ProbeType::kretprobe &&
+      if ((type == ProbeType::kretprobe || type == ProbeType::uretprobe) &&
           !bpftrace_.feature_->has_helper_get_func_ip()) {
         LOG(ERROR, builtin.loc, err_)
-            << "The 'func' builtin is not available for kretprobes on older "
-               "kernels without the get_func_ip BPF helper. Consider using "
+            << "The 'func' builtin is not available for " << type << "s on "
+               "kernels without the get_func_ip BPF feature. Consider using "
                "'probe' instead.";
       }
     }
