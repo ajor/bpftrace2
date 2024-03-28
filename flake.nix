@@ -139,6 +139,7 @@
             default = bpftrace-llvm17;
 
             # Support matrix of llvm versions
+            bpftrace-llvm18 = mkBpftrace pkgs.llvmPackages_18;
             bpftrace-llvm17 = mkBpftrace pkgs.llvmPackages_17;
             bpftrace-llvm16 = mkBpftrace pkgs.llvmPackages_16;
             bpftrace-llvm15 = mkBpftrace pkgs.llvmPackages_15;
