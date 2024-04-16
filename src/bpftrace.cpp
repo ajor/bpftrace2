@@ -69,11 +69,11 @@ Probe BPFtrace::generateWatchpointSetupProbe(const std::string &func,
                                              const ast::Probe &probe)
 {
   Probe setup_probe;
-  setup_probe.name = get_watchpoint_setup_probe_name(ap.name(func));
   setup_probe.type = ProbeType::uprobe;
-  setup_probe.path = ap.target;
-  setup_probe.attach_point = func;
+  setup_probe.name = get_watchpoint_setup_probe_name(ap.name(func));
   setup_probe.orig_name = get_watchpoint_setup_probe_name(probe.name());
+  setup_probe.detail = Watchpoint {}; // TODO fill in details
+//  setup_probe.attach_point = func;
   setup_probe.index = ap.index() > 0 ? ap.index() : probe.index();
 
   return setup_probe;
@@ -84,13 +84,12 @@ int BPFtrace::add_probe(ast::Probe &p)
   for (auto attach_point : *p.attach_points) {
     if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
       Probe probe;
-      probe.path = "/proc/self/exe";
-      probe.attach_point = attach_point->provider + "_trigger";
-      probe.type = probetype(attach_point->provider);
+      probe.type = ProbeType::special;
+      probe.detail = Uprobe { .path = "/proc/self/exe", .func = attach_point->provider + "_trigger", };
       probe.log_size = config_.get(ConfigKeyInt::log_size);
       probe.orig_name = p.name();
       probe.name = p.name();
-      probe.loc = 0;
+      //probe.loc = 0;
       probe.index = attach_point->index() > 0 ? attach_point->index()
                                               : p.index();
       resources.special_probes.push_back(probe);
@@ -135,14 +134,13 @@ int BPFtrace::add_probe(ast::Probe &p)
            probetype(attach_point->provider) == ProbeType::kretprobe) &&
           attach_point->target.empty()) {
         Probe probe;
-        probe.attach_point = attach_point->func;
         probe.type = probetype(attach_point->provider);
+        probe.detail = KprobeMulti { .funcs = attach_funcs };
         probe.log_size = config_.get(ConfigKeyInt::log_size);
         probe.orig_name = p.name();
         probe.name = attach_point->name(attach_point->target,
                                         attach_point->func);
         probe.index = p.index();
-        probe.funcs.assign(attach_funcs.begin(), attach_funcs.end());
 
         resources.probes.push_back(probe);
         continue;
@@ -154,15 +152,13 @@ int BPFtrace::add_probe(ast::Probe &p)
           !p.need_expansion && attach_funcs.size()) {
         if (!has_wildcard(attach_point->target)) {
           Probe probe;
-          probe.attach_point = attach_point->func;
-          probe.path = attach_point->target;
           probe.type = probetype(attach_point->provider);
+          probe.detail = UprobeMulti { .path = attach_point->target, .funcs = attach_funcs };
           probe.log_size = config_.get(ConfigKeyInt::log_size);
           probe.orig_name = p.name();
           probe.name = attach_point->name(attach_point->target,
                                           attach_point->func);
           probe.index = p.index();
-          probe.funcs = attach_funcs;
 
           resources.probes.push_back(probe);
           continue;
@@ -173,20 +169,17 @@ int BPFtrace::add_probe(ast::Probe &p)
           for (const auto &func : attach_funcs) {
             std::string func_id = func;
             std::string target = erase_prefix(func_id);
-            auto found = target_map.find(target);
-            if (found != target_map.end()) {
-              found->second.funcs.push_back(func);
+            if (auto found = target_map.find(target); found != target_map.end()) {
+              std::get<UprobeMulti>(found->second.detail).funcs.push_back(func);
             } else {
               Probe probe;
-              probe.attach_point = attach_point->func;
-              probe.path = target;
               probe.type = probetype(attach_point->provider);
-              probe.log_size = config_.get(ConfigKeyInt::log_size);
               probe.orig_name = p.name();
               probe.name = attach_point->name(target, attach_point->func);
               probe.index = p.index();
-              probe.funcs.push_back(func);
-              target_map.insert({ { target, probe } });
+              probe.detail = UprobeMulti { .path = target, .funcs = {func} };
+              probe.log_size = config_.get(ConfigKeyInt::log_size);
+              target_map[target] = std::move(probe);
             }
           }
           for (auto &pair : target_map) {
@@ -293,24 +286,90 @@ int BPFtrace::add_probe(ast::Probe &p)
       }
 
       Probe probe;
-      probe.path = target;
-      probe.attach_point = func_id;
+      //probe.path = target;
+      //probe.attach_point = func_id;
       probe.type = probetype(attach_point->provider);
       probe.log_size = config_.get(ConfigKeyInt::log_size);
       probe.orig_name = p.name();
-      probe.ns = attach_point->ns;
+      //probe.ns = attach_point->ns;
       probe.name = attach_point->name(target, func_id);
       probe.need_expansion = p.need_expansion;
-      probe.freq = attach_point->freq;
-      probe.address = attach_point->address;
-      probe.func_offset = attach_point->func_offset;
-      probe.loc = 0;
+      //probe.freq = attach_point->freq;
+      //probe.address = attach_point->address;
+      //probe.func_offset = attach_point->func_offset;
+      //probe.loc = 0;
       probe.index = attach_point->index() > 0 ? attach_point->index()
                                               : p.index();
-      probe.len = attach_point->len;
-      probe.mode = attach_point->mode;
-      probe.async = attach_point->async;
-      probe.pin = attach_point->pin;
+      //probe.len = attach_point->len;
+      //probe.mode = attach_point->mode;
+      //probe.async = attach_point->async;
+      //probe.pin = attach_point->pin;
+
+      switch (probetype(attach_point->provider)) {
+        case ProbeType::kprobe:
+        case ProbeType::kretprobe:
+          probe.detail = Kprobe { .module = target, .func = func_id };
+          break;
+        case ProbeType::kfunc:
+        case ProbeType::kretfunc:
+          probe.detail = Kfunc { .module = target, .func = func_id };
+          break;
+        case ProbeType::uprobe:
+        case ProbeType::uretprobe:
+          probe.detail = Uprobe { .path = target, .func = func_id };
+          break;
+        case ProbeType::usdt:
+          probe.detail = Usdt { .path = target, .ns = attach_point->ns, .event = func_id };
+          break;
+        case ProbeType::tracepoint:
+          probe.detail = Tracepoint { .ns = attach_point->target, .event = func_id };
+          break;
+        case ProbeType::rawtracepoint:
+          probe.detail = RawTracepoint { .event = func_id };
+          break;
+        case ProbeType::profile:
+        case ProbeType::interval:
+        {
+          uint64_t period, freq;
+          if (target == "hz") {
+            period = 0;
+            freq = attach_point->freq;
+          } else if (target == "s") {
+            period = attach_point->freq * 1e9;
+            freq = 0;
+          } else if (target == "ms") {
+            period = attach_point->freq * 1e6;
+            freq = 0;
+          } else if (target == "us") {
+            period = attach_point->freq * 1e3;
+            freq = 0;
+          } else {
+            LOG(FATAL) << "invalid time unit \"" << target << "\"";
+          }
+
+          probe.detail = Profile { .freq = freq, .period = period };
+          break;
+        }
+        case ProbeType::software:
+        case ProbeType::hardware:
+          probe.detail = Perf {};
+          break;
+        case ProbeType::watchpoint:
+        case ProbeType::asyncwatchpoint:
+          probe.detail = Watchpoint {
+            .address = attach_point->address,
+            .len = attach_point->len,
+            .mode = attach_point->mode,
+            .async = attach_point->async,
+          };
+          break;
+        case ProbeType::iter:
+          probe.detail = Iter { .object = func_id, .pin = attach_point->pin };
+          break;
+        case ProbeType::special: // already handled above
+        case ProbeType::invalid:
+          LOG(FATAL) << "invalid probe type";
+      }
 
       if (probetype(attach_point->provider) == ProbeType::usdt) {
         // We must attach to all locations of a USDT marker if duplicates exist
@@ -318,7 +377,8 @@ int BPFtrace::add_probe(ast::Probe &p)
         // code for more details.
         for (int i = 0; i < attach_point->usdt.num_locations; ++i) {
           Probe probe_copy = probe;
-          probe_copy.usdt_location_idx = i;
+          std::get<Usdt>(probe_copy.detail).usdt_location_idx = i;
+          //TODO what for?
           probe_copy.index = attach_point->index() > 0 ? attach_point->index()
                                                        : p.index();
 
@@ -505,14 +565,14 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     // NB: this check works b/c we set Probe::addr below
     //
     // TODO: Should we be printing a warning or info message out here?
-    if (bpftrace->resources.watchpoint_probes[probe_idx].address == addr)
+    if (std::get<Watchpoint>(bpftrace->resources.watchpoint_probes[probe_idx].detail).address == addr)
       goto out;
 
     // Attach the real watchpoint probe
     {
       bool registers_available = true;
       Probe &wp_probe = bpftrace->resources.watchpoint_probes[probe_idx];
-      wp_probe.address = addr;
+      std::get<Watchpoint>(wp_probe.detail).address = addr;
       std::vector<std::unique_ptr<AttachedProbe>> aps;
       try {
         aps = bpftrace->attach_probe(wp_probe, bpftrace->bytecode_);
@@ -536,7 +596,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   out:
     // Async watchpoints are not SIGSTOP'd
-    if (bpftrace->resources.watchpoint_probes[probe_idx].async)
+    if (std::get<Watchpoint>(bpftrace->resources.watchpoint_probes[probe_idx].detail).async)
       return;
 
     // Let the tracee continue
@@ -564,7 +624,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         std::remove_if(bpftrace->attached_probes_.begin(),
                        bpftrace->attached_probes_.end(),
                        [&](const auto &ap) {
-                         return ap->probe().address == addr;
+                         const auto &wp = std::get<Watchpoint>(ap->probe().detail);
+                         return wp.address == addr;
                        }),
         bpftrace->attached_probes_.end());
 
@@ -816,10 +877,11 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
     int pid,
     bool file_activation)
 {
+  const auto &path = std::get<Usdt>(probe.detail).path;
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
   if (feature_->has_uprobe_refcnt() ||
-      !(file_activation && probe.path.size())) {
+      !(file_activation && path.size())) {
     ret.emplace_back(std::make_unique<AttachedProbe>(
         probe, std::move(program), pid, *feature_, *btf_));
     return ret;
@@ -838,8 +900,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
     LOG(FATAL) << "failed to glob";
 
   char *p;
-  if (!(p = realpath(probe.path.c_str(), nullptr))) {
-    LOG(ERROR) << "Failed to resolve " << probe.path;
+  if (!(p = realpath(path.c_str(), nullptr))) {
+    LOG(ERROR) << "Failed to resolve " << path;
     return ret;
   }
   std::string resolved(p);
@@ -881,7 +943,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   }
 
   if (ret.empty())
-    LOG(ERROR) << "Failed to find processes running " << probe.path;
+    LOG(ERROR) << "Failed to find processes running " << path;
 
   return ret;
 }
@@ -897,7 +959,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
   // that includes wildcards.
   auto usdt_location_idx = (probe.type == ProbeType::usdt)
                                ? std::make_optional<int>(
-                                     probe.usdt_location_idx)
+                                     std::get<Usdt>(probe.detail).usdt_location_idx)
                                : std::nullopt;
 
   auto name = get_section_name_for_probe(probe.name,
@@ -1008,7 +1070,8 @@ int BPFtrace::run_special_probe(std::string name,
   for (auto probe = resources.special_probes.rbegin();
        probe != resources.special_probes.rend();
        ++probe) {
-    if ((*probe).attach_point == name) {
+    const auto &uprobe = std::get<Uprobe>(probe->detail);
+    if (uprobe.func == name) {
       auto aps = attach_probe(*probe, bytecode);
       if (aps.size() != 1)
         return -1;
@@ -1046,6 +1109,7 @@ int BPFtrace::run_iter()
     return 1;
   }
 
+  const auto &iter = std::get<Iter>(probe->detail);
   auto &ap = *attached_probes_.begin();
   int link_fd = ap->linkfd_;
   if (link_fd < 0) {
@@ -1053,7 +1117,7 @@ int BPFtrace::run_iter()
     return 1;
   }
 
-  if (probe->pin.empty()) {
+  if (iter.pin.empty()) {
     int iter_fd = bpf_iter_create(link_fd);
 
     if (iter_fd < 0) {
@@ -1067,7 +1131,7 @@ int BPFtrace::run_iter()
 
     close(iter_fd);
   } else {
-    auto pin = probe->pin;
+    auto pin = iter.pin;
 
     if (pin.at(0) != '/')
       pin = "/sys/fs/bpf/" + pin;

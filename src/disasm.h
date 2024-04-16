@@ -15,7 +15,7 @@ public:
 
 class Disasm {
 public:
-  Disasm(std::string &path);
+  Disasm(const std::string &path);
 
   AlignState is_aligned(uint64_t offset, uint64_t pc)
   {

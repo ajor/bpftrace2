@@ -11,7 +11,7 @@ class DummyDisasm : public IDisasm {
   }
 };
 
-Disasm::Disasm(std::string &path __attribute__((unused)))
+Disasm::Disasm(const std::string &path __attribute__((unused)))
 {
 #ifdef HAVE_BFD_DISASM
   dasm_ = std::make_unique<BfdDisasm>(path);

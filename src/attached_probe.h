@@ -69,7 +69,7 @@ private:
   void attach_interval();
   void attach_software();
   void attach_hardware();
-  void attach_watchpoint(int pid, const std::string &mode);
+  void attach_watchpoint(int pid);
   void attach_kfunc(void);
   int detach_kfunc(void);
   void attach_iter(void);

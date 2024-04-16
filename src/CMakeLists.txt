@@ -32,6 +32,7 @@ add_library(runtime
   log.cpp
   mapkey.cpp
   output.cpp
+  probe.cpp
   probe_matcher.cpp
   procmon.cpp
   printf.cpp

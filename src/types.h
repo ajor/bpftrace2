@@ -13,6 +13,8 @@
 
 #include <cereal/access.hpp>
 
+#include "probe.h"
+
 namespace bpftrace {
 
 const int MAX_STACK_SIZE = 1024;
@@ -477,29 +479,6 @@ SizedType CreateTimestampMode();
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
-enum class ProbeType {
-  invalid,
-  special,
-  kprobe,
-  kretprobe,
-  uprobe,
-  uretprobe,
-  usdt,
-  tracepoint,
-  profile,
-  interval,
-  software,
-  hardware,
-  watchpoint,
-  asyncwatchpoint,
-  kfunc,
-  kretfunc,
-  iter,
-  rawtracepoint,
-};
-
-std::ostream &operator<<(std::ostream &os, ProbeType type);
-
 struct ProbeItem {
   std::string name;
   std::unordered_set<std::string> aliases;
@@ -538,54 +517,6 @@ ProbeType probetype(const std::string &type);
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string expand_probe_name(const std::string &orig_name);
-
-struct Probe {
-  ProbeType type;
-  std::string path;         // file path if used
-  std::string attach_point; // probe name (last component)
-  std::string orig_name;    // original full probe name,
-                            // before wildcard expansion
-  std::string name;         // full probe name
-  bool need_expansion;
-  std::string pin;  // pin file for iterator probes
-  std::string ns;   // for USDT probes, if provider namespace not from path
-  uint64_t loc = 0; // for USDT probes
-  int usdt_location_idx = 0; // to disambiguate duplicate USDT markers
-  uint64_t log_size = 1000000;
-  int index = 0;
-  int freq = 0;
-  uint64_t len = 0;   // for watchpoint probes, size of region
-  std::string mode;   // for watchpoint probes, watch mode (rwx)
-  bool async = false; // for watchpoint probes, if it's an async watchpoint
-  uint64_t address = 0;
-  uint64_t func_offset = 0;
-  std::vector<std::string> funcs;
-
-private:
-  friend class cereal::access;
-  template <typename Archive>
-  void serialize(Archive &archive)
-  {
-    archive(type,
-            path,
-            attach_point,
-            orig_name,
-            name,
-            pin,
-            ns,
-            loc,
-            usdt_location_idx,
-            log_size,
-            index,
-            freq,
-            len,
-            mode,
-            async,
-            address,
-            func_offset,
-            funcs);
-  }
-};
 
 const int RESERVED_IDS_PER_ASYNCACTION = 10000;
 

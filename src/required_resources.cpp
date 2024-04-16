@@ -7,6 +7,7 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/tuple.hpp>
 #include <cereal/types/unordered_set.hpp>
+#include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
 
 #include "bpftrace.h"

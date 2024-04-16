@@ -6,7 +6,7 @@ namespace bpftrace {
 
 class BfdDisasm : public IDisasm {
 public:
-  BfdDisasm(std::string &path);
+  BfdDisasm(const std::string &path);
   ~BfdDisasm();
 
   AlignState is_aligned(uint64_t offset, uint64_t pc);
