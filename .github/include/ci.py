@@ -36,6 +36,7 @@ BUILD_DIR = "build-ci"
 # latest LLVM release we support
 NIX_TARGET = os.environ.get("NIX_TARGET", "")
 CMAKE_BUILD_TYPE = os.environ.get("CMAKE_BUILD_TYPE", "Release")
+WARNINGS_AS_ERRORS = os.environ.get("WARNINGS_AS_ERRORS", "OFF")
 RUN_TESTS = os.environ.get("RUN_TESTS", "1")
 RUN_MEMLEAK_TEST = os.environ.get("RUN_MEMLEAK_TEST", "0")
 CC = os.environ.get("CC", "cc")
@@ -160,6 +161,7 @@ def configure():
         f"-DCMAKE_C_COMPILER={CC}",
         f"-DCMAKE_CXX_COMPILER={CXX}",
         f"-DCMAKE_BUILD_TYPE={CMAKE_BUILD_TYPE}",
+        f"-DWARNINGS_AS_ERRORS={WARNINGS_AS_ERRORS}",
         f"-DBUILD_ASAN={RUN_MEMLEAK_TEST}",
 
         # Static configs

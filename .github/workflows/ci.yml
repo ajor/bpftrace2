@@ -70,6 +70,7 @@ jobs:
           TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 17 Debug
           CMAKE_BUILD_TYPE: Debug
+          WARNINGS_AS_ERRORS: ON
           NIX_TARGET: .#bpftrace-llvm17
           TOOLS_TEST_OLDVERSION: tcpdrop.bt
           TOOLS_TEST_DISABLE: biosnoop.bt
