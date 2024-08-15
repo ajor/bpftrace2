@@ -40,45 +40,55 @@ static __u32 type_cnt(const struct btf *btf)
 
 __s32 BTF::start_id(const struct btf *btf) const
 {
-  return btf == vmlinux_btf ? 1 : vmlinux_btf_size + 1;
+  return btf == base_btf_ ? 1 : base_btf_size_ + 1;
 }
 
-BTF::BTF(const std::set<std::string> &modules) : state(NODATA)
+BTF::BTF(const std::set<std::string> &modules) : origin_(Origin::Kernel)
 {
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
   if (path) {
-    btf_objects.push_back(
+    btf_objects_.push_back(
         BTFObj{ .btf = btf__parse_raw(path), .id = 0, .name = "" });
-    vmlinux_btf = btf_objects.back().btf;
+    base_btf_ = btf_objects_.back().btf;
   } else
     load_kernel_btfs(modules);
 
-  if (btf_objects.empty()) {
+  if (btf_objects_.empty()) {
     LOG(V1) << "BTF: failed to find BTF data";
     return;
   }
 
-  vmlinux_btf_size = static_cast<__s32>(type_cnt(vmlinux_btf));
+  base_btf_size_ = static_cast<__s32>(type_cnt(base_btf_));
+}
 
-  state = OK;
+BTF::BTF(const bpf_object *obj) : origin_(Origin::Object)
+{
+  struct btf *btf = bpf_object__btf(obj);
+  // TODO make BpfBytecode have an identifying name?
+  btf_objects_.push_back(BTFObj{ btf, 0, "" });
 }
 
 BTF::~BTF()
 {
-  for (auto &btf_obj : btf_objects)
-    btf__free(btf_obj.btf);
+  assert(origin_ != Origin::Invalid);
+
+  if (origin_ == Origin::Kernel) {
+    for (auto &btf_obj : btf_objects_) {
+      btf__free(btf_obj.btf);
+    }
+  }
 }
 
 void BTF::load_kernel_btfs(const std::set<std::string> &modules)
 {
-  vmlinux_btf = btf__load_vmlinux_btf();
-  if (libbpf_get_error(vmlinux_btf)) {
+  base_btf_ = btf__load_vmlinux_btf();
+  if (libbpf_get_error(base_btf_)) {
     LOG(V1) << "BTF: failed to find BTF data for vmlinux, errno " << errno;
     return;
   }
-  btf_objects.push_back(
-      BTFObj{ .btf = vmlinux_btf, .id = 0, .name = "vmlinux" });
+  btf_objects_.push_back(
+      BTFObj{ .btf = base_btf_, .id = 0, .name = "vmlinux" });
 
   if (bpftrace_ && !bpftrace_->feature_->has_module_btf())
     return;
@@ -120,10 +130,10 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
       continue;
 
     if (mod_name == "vmlinux") {
-      btf_objects.front().id = id;
+      btf_objects_.front().id = id;
     } else if (modules.find(mod_name) != modules.end()) {
-      btf_objects.push_back(
-          BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, vmlinux_btf),
+      btf_objects_.push_back(
+          BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, base_btf_),
                   .id = id,
                   .name = mod_name });
     }
@@ -241,13 +251,13 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set) const
   // Definition dumping from multiple modules would require to resolve type
   // conflicts, so we allow dumping from a single module or from vmlinux only.
   std::unordered_set<std::string> to_dump(set);
-  if (btf_objects.size() == 2) {
-    auto *mod_btf = btf_objects[0].btf == vmlinux_btf ? btf_objects[1].btf
-                                                      : btf_objects[0].btf;
+  if (btf_objects_.size() == 2) {
+    auto *mod_btf = btf_objects_[0].btf == base_btf_ ? btf_objects_[1].btf
+                                                     : btf_objects_[0].btf;
     return dump_defs_from_btf(mod_btf, to_dump);
   }
 
-  return dump_defs_from_btf(vmlinux_btf, to_dump);
+  return dump_defs_from_btf(base_btf_, to_dump);
 }
 
 std::string BTF::type_of(const std::string &name, const std::string &field)
@@ -525,7 +535,7 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
 std::unique_ptr<std::istream> BTF::get_all_funcs() const
 {
   auto funcs = std::make_unique<std::stringstream>();
-  for (auto &btf_obj : btf_objects)
+  for (auto &btf_obj : btf_objects_)
     *funcs << get_all_funcs_from_btf(btf_obj);
   return funcs;
 }
@@ -620,7 +630,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
     return params.find(f) != params.end();
   };
 
-  for (auto &btf_obj : btf_objects) {
+  for (auto &btf_obj : btf_objects_) {
     if (std::all_of(funcs.begin(), funcs.end(), all_resolved))
       break;
 
@@ -699,7 +709,7 @@ std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const
 std::set<std::string> BTF::get_all_structs() const
 {
   std::set<std::string> structs;
-  for (auto &btf_obj : btf_objects) {
+  for (auto &btf_obj : btf_objects_) {
     auto mod_structs = get_all_structs_from_btf(btf_obj.btf);
     structs.insert(mod_structs.begin(), mod_structs.end());
   }
@@ -739,7 +749,7 @@ std::unordered_set<std::string> BTF::get_all_iters_from_btf(
 std::unordered_set<std::string> BTF::get_all_iters() const
 {
   std::unordered_set<std::string> iters;
-  for (auto &btf_obj : btf_objects) {
+  for (auto &btf_obj : btf_objects_) {
     auto mod_iters = get_all_iters_from_btf(btf_obj.btf);
     iters.insert(mod_iters.begin(), mod_iters.end());
   }
@@ -748,7 +758,7 @@ std::unordered_set<std::string> BTF::get_all_iters() const
 
 int BTF::get_btf_id(std::string_view func, std::string_view mod) const
 {
-  for (auto &btf_obj : btf_objects) {
+  for (auto &btf_obj : btf_objects_) {
     if (!mod.empty() && mod != btf_obj.name)
       continue;
 
@@ -763,7 +773,7 @@ int BTF::get_btf_id(std::string_view func, std::string_view mod) const
 BTF::BTFId BTF::find_id(const std::string &name,
                         std::optional<__u32> kind) const
 {
-  for (auto &btf_obj : btf_objects) {
+  for (auto &btf_obj : btf_objects_) {
     __s32 id = kind ? btf__find_by_name_kind(btf_obj.btf, name.c_str(), *kind)
                     : btf__find_by_name(btf_obj.btf, name.c_str());
     if (id >= 0)
