@@ -48,8 +48,7 @@ BTF::BTF(const std::set<std::string> &modules) : origin_(Origin::Kernel)
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
   if (path) {
-    btf_objects_.push_back(
-        BTFObj{ .btf = btf__parse_raw(path), .id = 0, .name = "" });
+    btf_objects_.push_back(BTFObj{ .btf = btf__parse_raw(path), .name = "" });
     base_btf_ = btf_objects_.back().btf;
   } else
     load_kernel_btfs(modules);
@@ -66,7 +65,7 @@ BTF::BTF(const bpf_object *obj) : origin_(Origin::Object)
 {
   struct btf *btf = bpf_object__btf(obj);
   // TODO make BpfBytecode have an identifying name?
-  btf_objects_.push_back(BTFObj{ btf, 0, "" });
+  btf_objects_.push_back(BTFObj{ btf, "" });
 }
 
 BTF::~BTF()
@@ -87,8 +86,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     LOG(V1) << "BTF: failed to find BTF data for vmlinux, errno " << errno;
     return;
   }
-  btf_objects_.push_back(
-      BTFObj{ .btf = base_btf_, .id = 0, .name = "vmlinux" });
+  btf_objects_.push_back(BTFObj{ .btf = base_btf_, .name = "vmlinux" });
 
   if (bpftrace_ && !bpftrace_->feature_->has_module_btf())
     return;
@@ -129,12 +127,9 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     if (!info.kernel_btf)
       continue;
 
-    if (mod_name == "vmlinux") {
-      btf_objects_.front().id = id;
-    } else if (modules.find(mod_name) != modules.end()) {
+    if (mod_name != "vmlinux" && modules.find(mod_name) != modules.end()) {
       btf_objects_.push_back(
           BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, base_btf_),
-                  .id = id,
                   .name = mod_name });
     }
   }
