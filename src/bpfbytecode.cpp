@@ -307,6 +307,11 @@ int BpfBytecode::countStackMaps() const
   return n;
 }
 
+BTF BpfBytecode::btf() const
+{
+  return BTF{ bpf_object_.get() };
+}
+
 void BpfBytecode::set_map_ids(RequiredResources &resources)
 {
   for (auto &map : maps_) {

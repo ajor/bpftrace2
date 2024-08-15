@@ -47,6 +47,7 @@ public:
 
   const std::map<std::string, BpfMap> &maps() const;
   int countStackMaps() const;
+  BTF btf() const;
 
 private:
   void prepare_progs(const std::vector<Probe> &probes,

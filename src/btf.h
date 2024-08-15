@@ -10,6 +10,7 @@
 #include <string>
 #include <unistd.h>
 #include <unordered_set>
+#include <vector>
 
 // Taken from libbpf
 #define BTF_INFO_ENC(kind, kind_flag, vlen)                                    \
@@ -22,17 +23,26 @@
       BTF_INT_ENC(encoding, bits_offset, bits)
 #define BTF_PARAM_ENC(name, type) (name), (type)
 
+struct bpf_object;
 struct btf;
 struct btf_type;
 
 namespace bpftrace {
 
+class BpfBytecode;
 class BPFtrace;
 
+/**
+ * Wrapper class around BTF data.
+ *
+ * The data can either be from a single BPF object or from multiple split BTF
+ * objects.
+ */
 class BTF {
-  enum state {
-    NODATA,
-    OK,
+  enum class Origin {
+    Invalid,
+    Kernel,
+    Object,
   };
 
   // BTF object for vmlinux or a kernel module.
@@ -56,12 +66,13 @@ public:
   {
     bpftrace_ = bpftrace;
   };
+  BTF(const bpf_object* obj);
   ~BTF();
 
   bool has_data(void) const;
   size_t objects_cnt() const
   {
-    return btf_objects.size();
+    return btf_objects_.size();
   }
   std::string c_def(const std::unordered_set<std::string>& set) const;
   std::string type_of(const std::string& name, const std::string& field);
@@ -112,17 +123,17 @@ private:
 
   __s32 start_id(const struct btf* btf) const;
 
-  struct btf* vmlinux_btf = nullptr;
-  __s32 vmlinux_btf_size;
+  struct btf* base_btf_ = nullptr;
+  __s32 base_btf_size_;
   // BTF objects for vmlinux and modules
-  std::vector<BTFObj> btf_objects;
-  enum state state = NODATA;
+  std::vector<BTFObj> btf_objects_;
   BPFtrace* bpftrace_ = nullptr;
+  Origin origin_;
 };
 
 inline bool BTF::has_data(void) const
 {
-  return state == OK;
+  return !btf_objects_.empty();
 }
 
 } // namespace bpftrace
