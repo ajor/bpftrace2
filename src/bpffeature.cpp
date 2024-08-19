@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #include "bpf_assembler.h"
-#include "btf.h"
 #include "debugfs.h"
 #include "probe_matcher.h"
 #include "tracefs.h"

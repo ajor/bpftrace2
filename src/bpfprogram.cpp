@@ -56,7 +56,7 @@ void BpfProgram::set_expected_attach_type(const Probe &probe,
 }
 
 void BpfProgram::set_attach_target(const Probe &probe,
-                                   const BTF &btf,
+                                   const btf::BTF &btf,
                                    const Config &config)
 {
   if (probe.type != ProbeType::kfunc && probe.type != ProbeType::kretfunc &&
