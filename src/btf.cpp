@@ -40,19 +40,22 @@ static __u32 type_cnt(const struct btf *btf)
 
 BtfObject::BtfObject(struct btf *base_btf)
 {
-  obj_ = std::unique_ptr<struct btf, BtfDeleter>(base_btf, BtfDeleter(Origin::Kernel));
+  obj_ = std::unique_ptr<struct btf, BtfDeleter>(base_btf,
+                                                 BtfDeleter(Origin::Kernel));
 }
 
 BtfObject::BtfObject(uint32_t id, struct btf *base_btf)
 {
   struct btf *btf = btf__load_from_kernel_by_id_split(id, base_btf);
-  obj_ = std::unique_ptr<struct btf, BtfDeleter>(btf, BtfDeleter(Origin::Kernel));
+  obj_ = std::unique_ptr<struct btf, BtfDeleter>(btf,
+                                                 BtfDeleter(Origin::Kernel));
 }
 
 BtfObject::BtfObject(const bpf_object *obj)
 {
   struct btf *btf = bpf_object__btf(obj);
-  obj_ = std::unique_ptr<struct btf, BtfDeleter>(btf, BtfDeleter(Origin::Object));
+  obj_ = std::unique_ptr<struct btf, BtfDeleter>(btf,
+                                                 BtfDeleter(Origin::Object));
 }
 
 const struct btf *BtfObject::btf() const
@@ -62,7 +65,7 @@ const struct btf *BtfObject::btf() const
 
 Functions BtfObject::functions() const
 {
-  return Functions{obj_.get(), 0}; // TODO 0 or 1 to start?
+  return Functions{ obj_.get(), 0 }; // TODO 0 or 1 to start?
 }
 
 __s32 BTF::start_id(const struct btf *btf) const
@@ -95,7 +98,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     LOG(V1) << "BTF: failed to find BTF data for vmlinux, errno " << errno;
     return;
   }
-  btf_objects_.emplace_back(BtfObject{base_btf_}, "vmlinux");
+  btf_objects_.emplace_back(BtfObject{ base_btf_ }, "vmlinux");
 
   if (bpftrace_ && !bpftrace_->feature_->has_module_btf())
     return;
@@ -137,7 +140,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
       continue;
 
     if (mod_name != "vmlinux" && modules.find(mod_name) != modules.end()) {
-      btf_objects_.emplace_back(BtfObject{id, base_btf_}, mod_name);
+      btf_objects_.emplace_back(BtfObject{ id, base_btf_ }, mod_name);
     }
   }
 }
@@ -254,8 +257,9 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set) const
   // conflicts, so we allow dumping from a single module or from vmlinux only.
   std::unordered_set<std::string> to_dump(set);
   if (btf_objects_.size() == 2) {
-    auto *mod_btf = btf_objects_[0].btf.btf() == base_btf_ ? btf_objects_[1].btf.btf()
-                                                     : btf_objects_[0].btf.btf();
+    auto *mod_btf = btf_objects_[0].btf.btf() == base_btf_
+                        ? btf_objects_[1].btf.btf()
+                        : btf_objects_[0].btf.btf();
     return dump_defs_from_btf(mod_btf, to_dump);
   }
 
@@ -528,7 +532,7 @@ std::string BTF::get_all_funcs_from_btf(const NamedBtfObj &btf_obj) const
     if (btf_vlen(t) > arch::max_arg() + 1)
       continue;
 
-    funcs += std::string{btf_obj.name} + ":" + std::string(func_name) + "\n";
+    funcs += std::string{ btf_obj.name } + ":" + std::string(func_name) + "\n";
   }
 
   return funcs;
@@ -571,7 +575,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
       continue;
 
     const char *str = btf__name_by_offset(btf_obj.btf.btf(), t->name_off);
-    std::string func_name = std::string{btf_obj.name} + ":" + str;
+    std::string func_name = std::string{ btf_obj.name } + ":" + str;
 
     if (funcs.find(func_name) == funcs.end())
       continue;
@@ -590,7 +594,8 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     for (j = 0, p = btf_params(t); j < btf_vlen(t); j++, p++) {
       // set by dump_printf callback
       type = std::string("");
-      const char *arg_name = btf__name_by_offset(btf_obj.btf.btf(), p->name_off);
+      const char *arg_name = btf__name_by_offset(btf_obj.btf.btf(),
+                                                 p->name_off);
 
       err = btf_dump__emit_type_decl(dump, p->type, &decl_opts);
       if (err) {
@@ -776,7 +781,9 @@ BTF::BTFId BTF::find_id(const std::string &name,
                         std::optional<__u32> kind) const
 {
   for (auto &btf_obj : btf_objects_) {
-    __s32 id = kind ? btf__find_by_name_kind(btf_obj.btf.btf(), name.c_str(), *kind)
+    __s32 id = kind ? btf__find_by_name_kind(btf_obj.btf.btf(),
+                                             name.c_str(),
+                                             *kind)
                     : btf__find_by_name(btf_obj.btf.btf(), name.c_str());
     if (id >= 0)
       return { btf_obj.btf.btf(), static_cast<__u32>(id) };
@@ -889,13 +896,13 @@ std::string_view Param::name() const
   return btf__name_by_offset(btf_, param_->name_off);
 }
 
-SizedType Param::type() const
+SizedType Param::type(StructManager &structs) const
 {
-  return get_stype(BTFId{ .btf = btf_, .id = param_->type});
+  return get_stype(btf_, param_->type, structs);
 }
 
 Parameters::Parameters(const struct btf *btf, const struct btf_type *proto_type)
-  : btf_(btf), proto_type_(proto_type)
+    : btf_(btf), proto_type_(proto_type)
 {
   assert(proto_type && btf_is_func_proto(proto_type));
 }
@@ -905,7 +912,8 @@ uint16_t Parameters::size() const
   return btf_vlen(proto_type_);
 }
 
-Function::Function(const struct btf* btf, uint32_t id) : btf_(btf) {
+Function::Function(const struct btf *btf, uint32_t id) : btf_(btf)
+{
   func_type_ = btf__type_by_id(btf_, id);
 
   // Should have been checked before creating a Function object:
@@ -917,13 +925,15 @@ Function::Function(const struct btf* btf, uint32_t id) : btf_(btf) {
   }
 }
 
-std::string_view Function::name() const {
+std::string_view Function::name() const
+{
   return btf__name_by_offset(btf_, func_type_->name_off);
 }
 
-Parameters Function::parameters() const {
+Parameters Function::parameters() const
+{
   const struct btf_type *proto_type = btf__type_by_id(btf_, func_type_->type);
-  return Parameters{btf_, proto_type};
+  return Parameters{ btf_, proto_type };
 }
 
 } // namespace bpftrace::btf

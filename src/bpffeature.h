@@ -162,7 +162,7 @@ private:
       int* outfd = nullptr);
   bool try_load_btf(const void* btf_data, size_t btf_size);
 
-  btf::BTF btf_ {{ "vmlinux" }};
+  btf::BTF btf_{ { "vmlinux" } };
 
   BPFnofeature no_feature_;
 };

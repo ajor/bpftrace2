@@ -47,19 +47,19 @@ public:
   /**
    * Construct with the kernel's base BTF (normally from vmlinux)
    */
-  BtfObject(struct btf *base_btf);
+  BtfObject(struct btf* base_btf);
 
   /**
    * Construct with BTF from a kernel module
    */
-  BtfObject(uint32_t id, struct btf *base_btf);
+  BtfObject(uint32_t id, struct btf* base_btf);
 
   /**
    * Load BTF from a bpf_object
    */
-  BtfObject(const struct bpf_object *obj);
+  BtfObject(const struct bpf_object* obj);
 
-  const struct btf *btf() const;
+  const struct btf* btf() const;
   Functions functions() const;
 
 private:
@@ -71,10 +71,14 @@ private:
 
   class BtfDeleter {
   public:
-    BtfDeleter() {}
-    BtfDeleter(Origin origin) : origin_(origin) {}
+    BtfDeleter()
+    {
+    }
+    BtfDeleter(Origin origin) : origin_(origin)
+    {
+    }
 
-    void operator()(struct btf *obj)
+    void operator()(struct btf* obj)
     {
       assert(origin_ != Origin::Invalid);
 
@@ -219,49 +223,59 @@ public:
     using pointer = Param;
     using reference = Param;
 
-    Iterator() {}
-    Iterator(const struct btf *btf, const struct btf_param *param)
-      : btf_(btf), param_(param) {
+    Iterator()
+    {
+    }
+    Iterator(const struct btf* btf, const struct btf_param* param)
+        : btf_(btf), param_(param)
+    {
     }
 
-    reference operator*() const {
-      return Param { btf_, param_ };
+    reference operator*() const
+    {
+      return Param{ btf_, param_ };
     }
-    pointer operator->() {
-      return Param { btf_, param_ };
+    pointer operator->()
+    {
+      return Param{ btf_, param_ };
     }
 
-    Iterator& operator++() {
+    Iterator& operator++()
+    {
       ++param_;
       return *this;
     }
-    Iterator operator++(int) {
+    Iterator operator++(int)
+    {
       Iterator tmp = *this;
       ++(*this);
       return tmp;
     }
 
-    friend bool operator==(const Iterator& a, const Iterator &b) {
+    friend bool operator==(const Iterator& a, const Iterator& b)
+    {
       return a.btf_ == b.btf_ && a.param_ == b.param_;
     }
     // TODO operator!= ?
   private:
-    const struct btf *btf_ = nullptr;
-    const struct btf_param *param_ = nullptr;
+    const struct btf* btf_ = nullptr;
+    const struct btf_param* param_ = nullptr;
   };
   static_assert(std::forward_iterator<Iterator>);
 
-  Iterator begin() { 
+  Iterator begin()
+  {
     return Iterator(btf_, btf_params(proto_type_));
   }
 
-  Iterator end() {
+  Iterator end()
+  {
     return Iterator(btf_, btf_params(proto_type_) + btf_vlen(proto_type_));
   }
 
 private:
-  const struct btf *btf_;
-  const struct btf_type *proto_type_;
+  const struct btf* btf_;
+  const struct btf_type* proto_type_;
 };
 
 /**
@@ -276,7 +290,7 @@ public:
 
 private:
   const struct btf* btf_;
-  const struct btf_type *func_type_;
+  const struct btf_type* func_type_;
 };
 
 /**
@@ -284,7 +298,10 @@ private:
  */
 class Functions {
 public:
-  Functions(const struct btf* btf, uint32_t start_id) : btf_(btf), start_id_(start_id) {}
+  Functions(const struct btf* btf, uint32_t start_id)
+      : btf_(btf), start_id_(start_id)
+  {
+  }
 
   class Iterator {
   public:
@@ -294,30 +311,39 @@ public:
     using pointer = Function;
     using reference = Function;
 
-    Iterator() {}
-    Iterator(const struct btf *btf, uint32_t start_id) : btf_(btf), id_(start_id) {
+    Iterator()
+    {
+    }
+    Iterator(const struct btf* btf, uint32_t start_id)
+        : btf_(btf), id_(start_id)
+    {
       advance();
     }
 
-    reference operator*() const {
-      return Function {btf_, id_};
+    reference operator*() const
+    {
+      return Function{ btf_, id_ };
     }
-    pointer operator->() {
-      return Function {btf_, id_};
+    pointer operator->()
+    {
+      return Function{ btf_, id_ };
     }
 
-    Iterator& operator++() {
+    Iterator& operator++()
+    {
       ++id_;
       advance();
       return *this;
     }
-    Iterator operator++(int) {
+    Iterator operator++(int)
+    {
       Iterator tmp = *this;
       ++(*this);
       return tmp;
     }
 
-    friend bool operator==(const Iterator& a, const Iterator &b) {
+    friend bool operator==(const Iterator& a, const Iterator& b)
+    {
       return a.btf_ == b.btf_ && a.id_ == b.id_;
     }
     // TODO operator!= ?
@@ -326,12 +352,13 @@ public:
      * Advances the iterator to the next BTF function, if it is not currently
      * pointing to one.
      */
-    void advance() {
+    void advance()
+    {
       if (!btf_)
         return;
       uint32_t num_ids = btf__type_cnt(btf_);
       for (; id_ < num_ids; id_++) {
-        const struct btf_type *t = btf__type_by_id(btf_, id_);
+        const struct btf_type* t = btf__type_by_id(btf_, id_);
         if (t && btf_is_func(t))
           return;
       }
@@ -341,16 +368,22 @@ public:
       id_ = 0;
     }
 
-    const struct btf *btf_ = nullptr;
+    const struct btf* btf_ = nullptr;
     uint32_t id_ = 0;
   };
   static_assert(std::forward_iterator<Iterator>);
 
-  Iterator begin() { return Iterator(btf_, start_id_); }
-  Iterator end() { return Iterator(nullptr, 0); }
+  Iterator begin()
+  {
+    return Iterator(btf_, start_id_);
+  }
+  Iterator end()
+  {
+    return Iterator(nullptr, 0);
+  }
 
 private:
-  const struct btf *btf_;
+  const struct btf* btf_;
   uint32_t start_id_;
 };
 
