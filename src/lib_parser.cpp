@@ -23,7 +23,7 @@ std::vector<char> openFile(fs::path path)
 }
 } // namespace
 
-bool LibParser::parse(fs::path libPath, FunctionRegistry &functions, StructManager &structs)
+bool LibParser::parse(std::string_view libName, fs::path libPath, FunctionRegistry &functions, StructManager &structs)
 {
   auto elf = openFile(libPath);
   BpfBytecode bytecode{elf};
@@ -36,9 +36,8 @@ bool LibParser::parse(fs::path libPath, FunctionRegistry &functions, StructManag
       params.emplace_back(std::string{param.name()}, param.type(structs));
     }
 
-    //std::string funcName = libName + "." + func.name();
-    std::string funcName = std::string{func.name()};
-    functions.add(Function::Origin::Library, std::move(funcName), func.returnType(structs), std::move(params));
+//    std::string funcName = std::string{libName} + "_" + std::string{func.name()};
+    functions.add(Function::Origin::Library, libName, func.name(), func.returnType(structs), std::move(params));
   }
 
   for (const auto &func : btf.functions()) {

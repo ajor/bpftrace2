@@ -3,20 +3,32 @@
 namespace bpftrace {
 
 void FunctionRegistry::add(Function::Origin origin,
-    std::string name,
+    std::string_view name,
     SizedType returnType,
     std::vector<Param> params)
 {
   all_funcs_.push_back(
-      std::make_unique<Function>(origin, name, returnType, params));
+      std::make_unique<Function>(origin, std::string{name}, returnType, params));
   Function &newFunc = *all_funcs_.back().get();
-  funcs_by_name_[newFunc.name()].push_back(newFunc);
+  funcs_by_fq_name_[newFunc.name()].push_back(newFunc);
+}
+
+void FunctionRegistry::add(Function::Origin origin,
+    std::string_view module,
+    std::string_view name,
+    SizedType returnType,
+    std::vector<Param> params)
+{
+  all_funcs_.push_back(
+      std::make_unique<Function>(origin, std::string{name}, returnType, params));
+  Function &newFunc = *all_funcs_.back().get();
+  funcs_by_fq_name_[std::string{module} + "_" + newFunc.name()].push_back(newFunc);
 }
 
 const Function* FunctionRegistry::get(const std::string &name) const
 {
-  auto it=funcs_by_name_.find(name);
-  if (it == funcs_by_name_.end()) {
+  auto it=funcs_by_fq_name_.find(name);
+  if (it == funcs_by_fq_name_.end()) {
     // uh-oh TODO
     return nullptr;
   }
@@ -27,12 +39,12 @@ const Function* FunctionRegistry::get(const std::string &name) const
 }
 
 ////
-//// TODO START USING THIS OVERLOAD-AWARE FUNCTION
+//// TODO START USING THIS OVERLOAD-AWARE FUNCTION GETTER
 ////
 const Function* FunctionRegistry::get(const std::string &name, const std::vector<Param> &params) const
 {
-  auto it=funcs_by_name_.find(name);
-  if (it == funcs_by_name_.end()) {
+  auto it=funcs_by_fq_name_.find(name);
+  if (it == funcs_by_fq_name_.end()) {
     // uh-oh TODO
     return nullptr;
   }

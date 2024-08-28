@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <string_view>
 
 namespace bpftrace {
 
@@ -12,7 +13,7 @@ class StructManager;
  */
 class LibParser {
 public:
-  bool parse(std::filesystem::path lib_path, FunctionRegistry &functions, StructManager &structs);
+  bool parse(std::string_view libName, std::filesystem::path libPath, FunctionRegistry &functions, StructManager &structs);
 };
 
 } // namespace bpftrace

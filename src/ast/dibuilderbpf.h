@@ -1,5 +1,6 @@
 #pragma once
 
+#include "functions.h"
 #include "mapkey.h"
 #include "types.h"
 
@@ -20,7 +21,9 @@ class DIBuilderBPF : public DIBuilder {
 public:
   DIBuilderBPF(Module &module);
 
-  void createFunctionDebugInfo(Function &func);
+  void createFunctionDebugInfo(llvm::Function &func);
+  void createFunctionDebugInfo(llvm::Function &func, const SizedType &returnType, const std::vector<Param> &params);
+  //void createFunctionDebugInfo(llvm::Function &func, const SizedType &returnType, const std::vector<SizedType> &params);
 
   DIType *getInt8Ty();
   DIType *getInt16Ty();
@@ -62,6 +65,7 @@ private:
     DIType *int_ = nullptr;
   } types_;
 
+  // TODO delete?
   std::unordered_map<std::string, DIType *> structs_;
 };
 

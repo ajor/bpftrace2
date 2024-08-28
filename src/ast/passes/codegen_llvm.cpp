@@ -518,7 +518,7 @@ void CodegenLLVM::visit(Call &call)
     FunctionType *funcaa_type = FunctionType::get(
         b_.GetType(func->returnType()), funcaa_params, false);
     Function *funcaa = Function::Create(
-        funcaa_type, Function::ExternalWeakLinkage, func->name(), module_.get());
+        funcaa_type, Function::ExternalLinkage, func->name(), module_.get());
 
     // TODO our elf files contain too many sections (no need for .debug*, .rel.debug*, .rel.BTF)
 
@@ -527,13 +527,13 @@ void CodegenLLVM::visit(Call &call)
     funcaa->setSection(".text");
     funcaa->setDoesNotThrow();
     funcaa->addFnAttr(Attribute::NoInline);
-    debug_.createFunctionDebugInfo(*funcaa);
+    debug_.createFunctionDebugInfo(*funcaa, func->returnType(), func->params());
 
-  auto ip = b_.saveIP();
-  auto *bbaa = BasicBlock::Create(module_->getContext(), "entryaa", funcaa);
-  b_.SetInsertPoint(bbaa);
-  b_.CreateRet(b_.getInt64(123));
-  b_.restoreIP(ip);
+//  auto ip = b_.saveIP();
+//  auto *bbaa = BasicBlock::Create(module_->getContext(), "entryaaTODO", funcaa);
+//  b_.SetInsertPoint(bbaa);
+//  b_.CreateRet(b_.getInt64(123));
+//  b_.restoreIP(ip);
 
     std::vector<Value*> funcaa_args;
     funcaa_args.reserve(call.vargs.size());

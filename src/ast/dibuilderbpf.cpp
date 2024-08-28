@@ -9,27 +9,20 @@
 
 namespace bpftrace::ast {
 
-DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
-{
-  file = createFile("bpftrace.bpf.o", ".");
-}
-
-void DIBuilderBPF::createFunctionDebugInfo(Function &func)
+  // TODO get rid of this function?
+void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func)
 {
   // BPF probe function has:
   // - int return type
   // - single parameter (ctx) of a pointer type
-  SmallVector<Metadata *, 2> types;
-  if (func.getFunctionType()->params().empty()) // TODO massive hack!
-    types = { getInt32Ty() };
-  else
-    types = { getInt64Ty(), getInt8PtrTy() };
+  SmallVector<Metadata *, 2> types = { getInt64Ty(), getInt8PtrTy() };
 
   DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
 
   std::string sanitised_name = sanitise_bpf_program_name(func.getName().str());
 
   DISubprogram::DISPFlags flags = DISubprogram::SPFlagDefinition;
+  // TODO is this needed?
   if (func.isLocalLinkage(func.getLinkage()))
     flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
 
@@ -43,12 +36,81 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func)
                                          DINode::FlagPrototyped,
                                          flags);
 
-  if (sanitised_name != "foo") // TODO massive hack!
   createParameterVariable(
       subprog, "ctx", 1, file, 0, static_cast<DIType *>(types[1]), true);
 
   func.setSubprogram(subprog);
 }
+
+DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
+{
+  file = createFile("bpftrace.bpf.o", ".");
+}
+
+void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func, const SizedType &returnType, const std::vector<Param> &params)
+{
+  SmallVector<Metadata *, 5> types = { GetType(returnType) };
+  std::transform(params.begin(), params.end(), std::back_inserter(types),
+      [this](const Param &param) { return GetType(param.type()); });
+
+  DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
+
+  std::string sanitised_name = sanitise_bpf_program_name(func.getName().str());
+
+  //DISubprogram::DISPFlags flags = DISubprogram::SPFlagDefinition;
+  //if (func.isLocalLinkage(func.getLinkage()))
+  //  flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
+
+  DISubprogram *subprog = createFunction(file,
+                                         sanitised_name,
+                                         sanitised_name,
+                                         file,
+                                         0,
+                                         ditype,
+                                         0,
+                                         DINode::FlagPrototyped,
+                                         DISubprogram::SPFlagZero);
+
+  for (size_t i = 0; i < params.size(); i++) {
+    createParameterVariable(subprog, params[i].name(), i, file, 0, static_cast<DIType*>(types[i+1]), true);
+  }
+
+  func.setSubprogram(subprog);
+}
+
+//void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func, const SizedType &returnType, const std::vector<SizedType> &params)
+//{
+//  std::vector<SizedType> stypes = { returnType };
+//  stypes.insert(stypes.end(), params.begin(), params.end());
+//
+//  SmallVector<Metadata *, 5> types;
+//  std::transform(stypes.begin(), stypes.end(), std::back_inserter(types),
+//      [this](const SizedType &stype) { return GetType(stype); });
+//
+//  DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
+//
+//  std::string sanitised_name = sanitise_bpf_program_name(func.getName().str());
+//
+//  DISubprogram::DISPFlags flags = DISubprogram::SPFlagDefinition;
+//  if (func.isLocalLinkage(func.getLinkage()))
+//    flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
+//
+//  DISubprogram *subprog = createFunction(file,
+//                                         sanitised_name,
+//                                         sanitised_name,
+//                                         file,
+//                                         0,
+//                                         ditype,
+//                                         0,
+//                                         DINode::FlagPrototyped,
+//                                         flags);
+//
+//  for (size_t i = 1; i < types.size(); i++) {
+//    createParameterVariable(subprog, "", i, file, 0, static_cast<DIType*>(types[i+1]), true);
+//  }
+//
+//  func.setSubprogram(subprog);
+//}
 
 DIType *DIBuilderBPF::getInt8Ty()
 {

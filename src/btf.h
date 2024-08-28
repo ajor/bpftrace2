@@ -212,6 +212,8 @@ private:
 
 /**
  * Pseudo-container providing access to function parameters
+ *
+ * TODO make this a random access iterator
  */
 class Parameters {
 public:

@@ -906,6 +906,7 @@ int main(int argc, char* argv[])
   //    "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/31416c53092b91a6/scripts/jwiepert/bpf_lib/api/__api_provider__/out/";
   //    std::string extension = ".bpf.o";
   pp.parse(
+      "api_provider",
       "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/31416c53092b91a6/"
       "scripts/jwiepert/bpf_lib/api/__api_provider__/out/api_provider.bpf.o",
       bpftrace.functions,

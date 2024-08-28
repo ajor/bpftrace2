@@ -57,14 +57,19 @@ private:
 class FunctionRegistry {
 public:
   void add(Function::Origin origin,
-      std::string name,
+      std::string_view name,
+      SizedType returnType,
+      std::vector<Param> params);
+  void add(Function::Origin origin,
+      std::string_view module,
+      std::string_view name,
       SizedType returnType,
       std::vector<Param> params);
   const Function* get(const std::string &name) const;
   const Function* get(const std::string &name, const std::vector<Param> &params) const;
 
 private:
-  std::unordered_map<std::string, std::vector<std::reference_wrapper<Function>>> funcs_by_name_;
+  std::unordered_map<std::string, std::vector<std::reference_wrapper<Function>>> funcs_by_fq_name_;
   std::vector<std::unique_ptr<Function>> all_funcs_;
 };
 
