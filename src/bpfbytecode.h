@@ -25,9 +25,9 @@ public:
   BpfBytecode()
   {
   }
-  BpfBytecode(std::span<const std::byte> elf);
-  BpfBytecode(std::span<uint8_t> elf);
-  BpfBytecode(std::span<char> elf);
+  BpfBytecode(std::span<const std::byte> elf, bool preserveElf=false);
+  BpfBytecode(std::span<uint8_t> elf, bool preserveElf=false);
+  BpfBytecode(std::span<char> elf, bool preserveElf=false);
 
   BpfBytecode(const BpfBytecode &) = delete;
   BpfBytecode &operator=(const BpfBytecode &) = delete;
@@ -53,6 +53,7 @@ public:
   const std::map<std::string, BpfMap> &maps() const;
   int countStackMaps() const;
   btf::BtfObject btf() const;
+  std::span<const std::byte> elf() const;
 
 private:
   void prepare_progs(const std::vector<Probe> &probes,
@@ -76,6 +77,7 @@ private:
   std::map<int, BpfMap *> maps_by_id_;
   std::map<std::string, BpfProgram> programs_;
   struct bpf_map *global_vars_map_ = nullptr;
+  std::vector<std::byte> elf_;
 };
 
 } // namespace bpftrace

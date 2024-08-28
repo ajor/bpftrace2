@@ -12,16 +12,17 @@
 
 namespace bpftrace {
 
-BpfBytecode::BpfBytecode(std::span<uint8_t> elf)
-    : BpfBytecode(std::as_bytes(elf))
+BpfBytecode::BpfBytecode(std::span<uint8_t> elf, bool preserveElf)
+    : BpfBytecode(std::as_bytes(elf), preserveElf)
 {
 }
 
-BpfBytecode::BpfBytecode(std::span<char> elf) : BpfBytecode(std::as_bytes(elf))
+BpfBytecode::BpfBytecode(std::span<char> elf, bool preserveElf)
+  : BpfBytecode(std::as_bytes(elf), preserveElf)
 {
 }
 
-BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
+BpfBytecode::BpfBytecode(std::span<const std::byte> elf, bool preserveElf)
 {
   int log_level = 0;
   // In debug mode, show full verifier log.
@@ -56,6 +57,10 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
   struct bpf_program *p;
   bpf_object__for_each_program (p, bpf_object_.get()) {
     programs_.emplace(bpf_program__name(p), BpfProgram(p));
+  }
+
+  if (preserveElf) {
+    elf_.assign(elf.begin(), elf.end());
   }
 }
 
@@ -321,6 +326,12 @@ int BpfBytecode::countStackMaps() const
 btf::BtfObject BpfBytecode::btf() const
 {
   return btf::BtfObject{ bpf_object_.get() };
+}
+
+std::span<const std::byte> BpfBytecode::elf() const
+{
+  assert(!elf_.empty() && "elf not preserved");
+  return elf_;
 }
 
 void BpfBytecode::set_map_ids(RequiredResources &resources)

@@ -550,6 +550,15 @@ bool skip_key_validation(const Call &call)
 
 void SemanticAnalyser::visit(Call &call)
 {
+  bool foundFunc = false;
+  if (auto *func = bpftrace_.functions.get(call.func)) {
+    LOG(ERROR) << "found a function!";
+    // TODO check parameters match up here...
+    call.type = func->returnType();
+    foundFunc = true;
+  }
+
+  // TODO make this unsafe check work with FunctionRegistry
   // Check for unsafe-ness first. It is likely the most pertinent issue
   // (and should be at the top) for any function call.
   if (bpftrace_.safe_mode_ && is_unsafe_func(call.func)) {
@@ -591,6 +600,8 @@ void SemanticAnalyser::visit(Call &call)
     Visit(call.vargs[i]);
   }
 
+
+  // TODO make this work with FunctionRegistry
   if (auto probe = dynamic_cast<Probe *>(scope_)) {
     for (auto *ap : probe->attach_points) {
       if (!check_available(call, *ap)) {
@@ -1413,6 +1424,8 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   } else {
+    if (foundFunc)
+      return; // hack
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";
     call.type = CreateNone();
   }

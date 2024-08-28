@@ -333,7 +333,8 @@ std::string BTF::type_of(const BTFId &type_id, const std::string &field)
   return std::string("");
 }
 
-static bool btf_type_is_modifier(const struct btf_type *t)
+namespace {
+bool btf_type_is_modifier(const struct btf_type *t)
 {
   // Some of them is not strictly a C modifier
   // but they are grouped into the same bucket
@@ -355,8 +356,8 @@ static bool btf_type_is_modifier(const struct btf_type *t)
   }
 }
 
-const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t,
-                                                    const struct btf *btf)
+const struct btf_type *btf_type_skip_modifiers(const struct btf_type *t,
+                                               const struct btf *btf)
 {
   while (t && btf_type_is_modifier(t)) {
     t = btf__type_by_id(btf, t->type);
@@ -365,29 +366,30 @@ const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t,
   return t;
 }
 
-__u32 BTF::get_type_tags(std::unordered_set<std::string> &tags,
-                         const BTFId &btf_id) const
+uint32_t get_type_tags(std::unordered_set<std::string> &tags,
+                       const struct btf *btf,
+                       uint32_t id)
 {
-  __u32 id = btf_id.id;
-  const struct btf_type *t = btf__type_by_id(btf_id.btf, btf_id.id);
+  const struct btf_type *t = btf__type_by_id(btf, id);
 
   while (t && btf_is_type_tag(t)) {
-    tags.insert(btf_str(btf_id.btf, t->name_off));
+    tags.insert(btf_str(btf, t->name_off));
     id = t->type;
-    t = btf__type_by_id(btf_id.btf, t->type);
+    t = btf__type_by_id(btf, t->type);
   }
 
   return id;
 }
+} // namespace
 
-SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
+SizedType get_stype(const struct btf *btf, uint32_t id, StructManager &structs)
 {
-  const struct btf_type *t = btf__type_by_id(btf_id.btf, btf_id.id);
+  const struct btf_type *t = btf__type_by_id(btf, id);
 
   if (!t)
     return CreateNone();
 
-  t = btf_type_skip_modifiers(t, btf_id.btf);
+  t = btf_type_skip_modifiers(t, btf);
 
   auto stype = CreateNone();
 
@@ -397,26 +399,23 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   } else if (btf_is_enum(t)) {
     stype = CreateInteger(t->size * 8, false);
   } else if (btf_is_composite(t)) {
-    std::string cast = btf_str(btf_id.btf, t->name_off);
+    std::string cast = btf_str(btf, t->name_off);
     if (cast.empty() || cast == "(anon)")
       return CreateNone();
     std::string comp = btf_is_struct(t) ? "struct" : "union";
     std::string name = comp + " " + cast;
 
-    stype = CreateRecord(name, bpftrace_->structs.LookupOrAdd(name, t->size));
-    if (resolve_structs)
-      resolve_fields(stype);
+    stype = CreateRecord(name, structs.LookupOrAdd(name, t->size));
+    //    if (resolve_structs)
+    //      resolve_fields(stype);
   } else if (btf_is_ptr(t)) {
-    const BTFId pointee_btf_id = { .btf = btf_id.btf, .id = t->type };
     std::unordered_set<std::string> tags;
-    auto id = get_type_tags(tags, pointee_btf_id);
-    stype = CreatePointer(
-        get_stype(BTFId{ .btf = btf_id.btf, .id = id }, false));
+    auto id = get_type_tags(tags, btf, t->type);
+    stype = CreatePointer(get_stype(btf, id, /*false,*/ structs));
     stype.SetBtfTypeTags(std::move(tags));
   } else if (btf_is_array(t)) {
     auto *array = btf_array(t);
-    const auto &elem_type = get_stype(
-        BTFId{ .btf = btf_id.btf, .id = array->type });
+    const auto &elem_type = get_stype(btf, array->type, /*true,*/ structs);
     if (elem_type.IsIntTy() && elem_type.GetSize() == 1) {
       stype = CreateString(array->nelems);
     } else {
@@ -424,6 +423,14 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     }
   }
 
+  return stype;
+}
+
+SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
+{
+  auto stype = btf::get_stype(btf_id.btf, btf_id.id, bpftrace_->structs);
+  if (resolve_structs)
+    resolve_fields(stype);
   return stype;
 }
 
@@ -928,6 +935,11 @@ Function::Function(const struct btf *btf, uint32_t id) : btf_(btf)
 std::string_view Function::name() const
 {
   return btf__name_by_offset(btf_, func_type_->name_off);
+}
+
+SizedType Function::returnType(StructManager &structs) const {
+  const struct btf_type *proto_type = btf__type_by_id(btf_, func_type_->type);
+  return get_stype(btf_, proto_type->type, structs);
 }
 
 Parameters Function::parameters() const

@@ -19,7 +19,11 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func)
   // BPF probe function has:
   // - int return type
   // - single parameter (ctx) of a pointer type
-  SmallVector<Metadata *, 2> types = { getInt64Ty(), getInt8PtrTy() };
+  SmallVector<Metadata *, 2> types;
+  if (func.getFunctionType()->params().empty()) // TODO massive hack!
+    types = { getInt32Ty() };
+  else
+    types = { getInt64Ty(), getInt8PtrTy() };
 
   DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
 
@@ -39,6 +43,7 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func)
                                          DINode::FlagPrototyped,
                                          flags);
 
+  if (sanitised_name != "foo") // TODO massive hack!
   createParameterVariable(
       subprog, "ctx", 1, file, 0, static_cast<DIType *>(types[1]), true);
 

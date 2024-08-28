@@ -4,6 +4,7 @@ add_library(ast
   async_event_types.cpp
   attachpoint_parser.cpp
   dibuilderbpf.cpp
+  functions.cpp
   int_parser.cpp
   irbuilderbpf.cpp
   pass_manager.cpp

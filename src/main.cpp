@@ -1,3 +1,9 @@
+#include <sys/mman.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include "ast.h"
+#include "lib_parser.h"
+
 #include <array>
 #include <bpf/libbpf.h>
 #include <cstdio>
@@ -893,6 +899,18 @@ int main(int argc, char* argv[])
   }
 
   bpftrace.kfunc_recursion_check(ast_ctx->root);
+
+  //  for (ast::Import &import : ((ast::Program*)ast_root)->imports) {
+  LibParser pp;
+  //    std::string searchPath =
+  //    "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/31416c53092b91a6/scripts/jwiepert/bpf_lib/api/__api_provider__/out/";
+  //    std::string extension = ".bpf.o";
+  pp.parse(
+      "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/31416c53092b91a6/"
+      "scripts/jwiepert/bpf_lib/api/__api_provider__/out/api_provider.bpf.o",
+      bpftrace.functions,
+      bpftrace.structs);
+  //  }
 
   auto pmresult = pm.Run(ast_ctx->root, ctx);
   if (!pmresult.Ok())

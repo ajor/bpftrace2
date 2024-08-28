@@ -35,6 +35,7 @@ namespace bpftrace {
 
 class BpfBytecode;
 class BPFtrace;
+class StructManager;
 
 namespace btf {
 class Functions;
@@ -152,10 +153,11 @@ private:
   void load_kernel_btfs(const std::set<std::string>& modules);
   SizedType get_stype(const BTFId& btf_id, bool resolve_structs = true);
   void resolve_fields(const BTFId& type_id, Struct* record, __u32 start_offset);
-  const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t,
-                                                 const struct btf* btf);
+  static const struct btf_type* btf_type_skip_modifiers(
+      const struct btf_type* t,
+      const struct btf* btf);
   BTFId find_id(const std::string& name,
-                     std::optional<__u32> kind = std::nullopt) const;
+                std::optional<__u32> kind = std::nullopt) const;
   __s32 find_id_in_btf(const struct btf* btf,
                        std::string_view name,
                        std::optional<__u32> = std::nullopt) const;
@@ -174,8 +176,8 @@ private:
    * type that is not a BTF_KIND_TYPE_TAG while also populating the tags set
    * with the tag/attribute names from the BTF_KIND_TYPE_TAG types it finds.
    */
-  __u32 get_type_tags(std::unordered_set<std::string>& tags,
-                      const BTFId& btf_id) const;
+  static __u32 get_type_tags(std::unordered_set<std::string>& tags,
+                             const BTFId& btf_id);
 
   __s32 start_id(const struct btf* btf) const;
 
@@ -195,15 +197,17 @@ inline bool BTF::has_data(void) const
  */
 class Param {
 public:
-  Param(const struct btf *btf, const struct btf_param *param)
-    : btf_(btf), param_(param) {}
+  Param(const struct btf* btf, const struct btf_param* param)
+      : btf_(btf), param_(param)
+  {
+  }
 
   std::string_view name() const;
-  SizedType type() const;
+  SizedType type(StructManager& structs) const;
 
 private:
-  const struct btf *btf_;
-  const struct btf_param *param_;
+  const struct btf* btf_;
+  const struct btf_param* param_;
 };
 
 /**
@@ -211,7 +215,7 @@ private:
  */
 class Parameters {
 public:
-  Parameters(const struct btf *btf, const struct btf_type *proto_type);
+  Parameters(const struct btf* btf, const struct btf_type* proto_type);
 
   uint16_t size() const;
 
@@ -286,6 +290,7 @@ public:
   Function(const struct btf* btf, uint32_t id);
 
   std::string_view name() const;
+  SizedType returnType(StructManager &structs) const;
   Parameters parameters() const;
 
 private:

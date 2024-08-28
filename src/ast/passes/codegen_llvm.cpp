@@ -1,3 +1,7 @@
+#include <sys/mman.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 #include "codegen_llvm.h"
 
 #include <algorithm>
@@ -46,6 +50,8 @@
 #include "usdt.h"
 
 namespace bpftrace::ast {
+
+using Function = llvm::Function;
 
 CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
     : CodegenLLVM(root, bpftrace, std::make_unique<USDTHelper>())
@@ -113,6 +119,7 @@ CodegenLLVM::CodegenLLVM(Node *root,
   license_var->setInitializer(
       ConstantDataArray::getString(module_->getContext(), license.c_str()));
   license_var->setSection("license");
+  license_var->addDebugInfo(debug_.createGlobalInt64("LICENSE")); // TODO make this a string, not int64
 }
 
 void CodegenLLVM::visit(Integer &integer)
@@ -493,6 +500,53 @@ void CodegenLLVM::visit(Builtin &builtin)
 
 void CodegenLLVM::visit(Call &call)
 {
+  // TODO don't perform the lookup again here - cache it in the AST?
+  bool foundFunc = false;
+  if (auto *func = bpftrace_.functions.get(call.func)) {
+    LOG(ERROR) << "found a function!";
+    // TODO check parameters match up here...
+    call.type = func->returnType();
+    foundFunc = true;
+
+    // create function declaration
+    std::vector<llvm::Type*> funcaa_params;
+    funcaa_params.reserve(func->params().size());
+    for (const auto &param : func->params()) {
+      funcaa_params.push_back(b_.GetType(param.type()));
+    }
+
+    FunctionType *funcaa_type = FunctionType::get(
+        b_.GetType(func->returnType()), funcaa_params, false);
+    Function *funcaa = Function::Create(
+        funcaa_type, Function::ExternalWeakLinkage, func->name(), module_.get());
+
+    // TODO our elf files contain too many sections (no need for .debug*, .rel.debug*, .rel.BTF)
+
+//    funcaa->setDSOLocal(true);
+//    funcaa->setVisibility(llvm::GlobalValue::DefaultVisibility);
+    funcaa->setSection(".text");
+    funcaa->setDoesNotThrow();
+    funcaa->addFnAttr(Attribute::NoInline);
+    debug_.createFunctionDebugInfo(*funcaa);
+
+  auto ip = b_.saveIP();
+  auto *bbaa = BasicBlock::Create(module_->getContext(), "entryaa", funcaa);
+  b_.SetInsertPoint(bbaa);
+  b_.CreateRet(b_.getInt64(123));
+  b_.restoreIP(ip);
+
+    std::vector<Value*> funcaa_args;
+    funcaa_args.reserve(call.vargs.size());
+    for (const auto &arg : call.vargs) {
+      accept(arg);
+      funcaa_args.push_back(expr_);
+    }
+
+    // call function
+    Value *result = b_.CreateCall(funcaa, funcaa_args);
+    expr_ = result;
+  }
+
   if (call.func == "count") {
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
@@ -1443,6 +1497,8 @@ void CodegenLLVM::visit(Call &call)
       expr_ = b_.CreateGetNs(call.type.ts_mode, call.loc);
     }
   } else {
+    if (foundFunc)
+      return; // TODO hack
     LOG(BUG) << "missing codegen for function \"" << call.func << "\"";
   }
 }
@@ -2611,6 +2667,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   Function *func = Function::Create(
       func_type, Function::ExternalLinkage, func_name, module_.get());
   func->setSection(get_section_name(func_name));
+  func->setDoesNotThrow();
   debug_.createFunctionDebugInfo(*func);
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
@@ -3796,7 +3853,7 @@ void CodegenLLVM::optimize()
   pb.crossRegisterProxies(lam, fam, cgam, mam);
 
   ModulePassManager mpm = pb.buildPerModuleDefaultPipeline(
-      llvm::OptimizationLevel::O3,
+      llvm::OptimizationLevel::O0,
       /*LTOPreLink=*/false);
   mpm.run(*module_, mam);
 
@@ -3857,7 +3914,43 @@ BpfBytecode CodegenLLVM::emit()
   assert(!output.empty());
 
   state_ = State::DONE;
-  return BpfBytecode{ output };
+
+  // TODO only do this linking if required
+
+  // statically link multiple bytecodes together
+  // TODO find a better place for this (create a Linker class?)
+  // TODO error checking
+  int newfd = memfd_create("linked_final", 0);
+  struct bpf_linker *linker = bpf_linker__new_fd(newfd, nullptr);
+  //struct bpf_linker *linker = bpf_linker__new("linked.out", nullptr);
+
+  int origFd = memfd_create("orig_bytecode", 0);
+  write(origFd, output.data(), output.size());
+  bpf_linker__add_fd(linker, origFd, nullptr);
+
+  // This does reopen the file, instead of keeping it's contents around
+  // - potential risk that contents change, but performance boost from not copying
+  //   bytes from buffer to buffer
+  int libFd = open("/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/31416c53092b91a6/scripts/jwiepert/bpf_lib/api/__api_provider__/out/api_provider.bpf.o", O_RDONLY);
+  bpf_linker__add_fd(linker, libFd, nullptr);
+
+  bpf_linker__finalize(linker);
+
+  off_t newfdSize = lseek(newfd, 0, SEEK_END);
+  lseek(newfd, 0, SEEK_SET);
+
+  std::vector<std::byte> newBuf;
+  newBuf.resize(newfdSize);
+  read(newfd, newBuf.data(), newfdSize);
+
+  bpf_linker__free(linker);
+
+  std::ofstream oooo("linked_auto.o");
+  for (const auto &byte : newBuf) {
+    oooo << (char)byte;
+  }
+
+  return BpfBytecode{ newBuf };
 }
 
 BpfBytecode CodegenLLVM::compile()

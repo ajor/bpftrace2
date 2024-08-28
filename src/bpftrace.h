@@ -21,6 +21,7 @@
 #include "child.h"
 #include "config.h"
 #include "dwarf_parser.h"
+#include "ast/functions.h"
 #include "output.h"
 #include "pcap_writer.h"
 #include "printf.h"
@@ -167,6 +168,7 @@ public:
   RequiredResources resources;
   BpfBytecode bytecode_;
   StructManager structs;
+  FunctionRegistry functions;
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
   std::map<libbpf::bpf_func_id, location> helper_use_loc_;
