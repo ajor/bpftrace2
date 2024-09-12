@@ -4,7 +4,7 @@ namespace bpftrace {
 
 void FunctionRegistry::add(Function::Origin origin,
     std::string_view name,
-    SizedType returnType,
+    const SizedType &returnType,
     std::vector<Param> params)
 {
   all_funcs_.push_back(
@@ -14,15 +14,16 @@ void FunctionRegistry::add(Function::Origin origin,
 }
 
 void FunctionRegistry::add(Function::Origin origin,
-    std::string_view module,
+    std::string_view ns,
     std::string_view name,
-    SizedType returnType,
+    const SizedType &returnType,
     std::vector<Param> params)
 {
   all_funcs_.push_back(
       std::make_unique<Function>(origin, std::string{name}, returnType, params));
   Function &newFunc = *all_funcs_.back().get();
-  funcs_by_fq_name_[std::string{module} + "_" + newFunc.name()].push_back(newFunc);
+  // TODO use proper namespacing syntax instead of underscore:
+  funcs_by_fq_name_[std::string{ns} + "_" + newFunc.name()].push_back(newFunc);
 }
 
 const Function* FunctionRegistry::get(const std::string &name) const

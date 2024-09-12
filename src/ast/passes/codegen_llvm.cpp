@@ -3928,10 +3928,10 @@ BpfBytecode CodegenLLVM::emit()
   write(origFd, output.data(), output.size());
   bpf_linker__add_fd(linker, origFd, nullptr);
 
-  // This does reopen the file, instead of keeping it's contents around
+  // This does reopen the file, instead of keeping its contents around
   // - potential risk that contents change, but performance boost from not copying
   //   bytes from buffer to buffer
-  int libFd = open("/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/31416c53092b91a6/scripts/jwiepert/bpf_lib/api/__api_provider__/out/api_provider.bpf.o", O_RDONLY);
+  int libFd = open("/home/ajor/fbsource/buck-out/v2/gen/fbcode/0f9da91310218111/scripts/dschatzberg/tdigest/__tdigest_lib__/out/tdigest_lib.bpf.o", O_RDONLY);
   bpf_linker__add_fd(linker, libFd, nullptr);
 
   bpf_linker__finalize(linker);

@@ -907,8 +907,13 @@ int main(int argc, char* argv[])
   //    std::string extension = ".bpf.o";
   pp.parse(
       "api_provider",
-      "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/31416c53092b91a6/"
+      "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/0f9da91310218111/"
       "scripts/jwiepert/bpf_lib/api/__api_provider__/out/api_provider.bpf.o",
+      bpftrace.functions,
+      bpftrace.structs);
+  pp.parse(
+      "tdigest",
+      "/home/ajor/fbsource/buck-out/v2/gen/fbcode/0f9da91310218111/scripts/dschatzberg/tdigest/__tdigest_lib__/out/tdigest_lib.bpf.o",
       bpftrace.functions,
       bpftrace.structs);
   //  }

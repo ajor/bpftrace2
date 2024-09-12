@@ -13,7 +13,7 @@ namespace bpftrace {
  */
 class Param {
 public:
-  Param(std::string name, SizedType type) : name_(std::move(name)), type_(std::move(type)) {}
+  Param(std::string name, const SizedType &type) : name_(std::move(name)), type_(type) {}
 
   const std::string &name() const { return name_; }
   const SizedType &type() const { return type_; }
@@ -24,7 +24,9 @@ private:
 };
 
 /**
- * A function which is callable in a BpfScript program
+ * Represents the type of a function which is callable in a BpfScript program.
+ *
+ * The function's implementation is not contained here.
  */
 class Function {
 public:
@@ -33,7 +35,7 @@ public:
     Library,
   };
 
-  Function(Origin origin, std::string name, SizedType returnType, std::vector<Param> params)
+  Function(Origin origin, std::string name, const SizedType &returnType, std::vector<Param> params)
     : name_(std::move(name)), returnType_(returnType), params_(std::move(params)), origin_(origin) {}
 
   const std::string &name() const { return name_; }
@@ -58,12 +60,12 @@ class FunctionRegistry {
 public:
   void add(Function::Origin origin,
       std::string_view name,
-      SizedType returnType,
+      const SizedType &returnType,
       std::vector<Param> params);
   void add(Function::Origin origin,
-      std::string_view module,
+      std::string_view ns,
       std::string_view name,
-      SizedType returnType,
+      const SizedType &returnType,
       std::vector<Param> params);
   const Function* get(const std::string &name) const;
   const Function* get(const std::string &name, const std::vector<Param> &params) const;
