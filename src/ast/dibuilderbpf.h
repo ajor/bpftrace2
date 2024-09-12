@@ -34,6 +34,7 @@ public:
   // generating debuginfo for some BPF map fields. For details, see comment in
   // DIBuilderBPF::GetMapFieldInt.
   DIType *getIntTy();
+  DIType *getVoidTy();
 
   DIType *GetType(const SizedType &stype);
   DIType *CreateTupleType(const SizedType &stype);
@@ -63,6 +64,7 @@ private:
     DIType *int128 = nullptr;
     DIType *int8_ptr = nullptr;
     DIType *int_ = nullptr;
+    DIType *void_ = nullptr;
   } types_;
 
   // TODO delete?

@@ -421,6 +421,9 @@ SizedType get_stype(const struct btf *btf, uint32_t id, StructManager &structs)
     } else {
       stype = CreateArray(array->nelems, elem_type);
     }
+  } else if (btf_is_void(t)) {
+    // TODO should we use type::Void or just stick with type::None? Other parsers will need to be updated too
+    stype = CreateVoid();
   }
 
   return stype;

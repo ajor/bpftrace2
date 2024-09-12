@@ -160,6 +160,14 @@ DIType *DIBuilderBPF::getInt8PtrTy()
   return types_.int8_ptr;
 }
 
+DIType *DIBuilderBPF::getVoidTy()
+{
+  if (!types_.void_)
+    types_.void_ = createBasicType("void", 0, dwarf::DW_ATE_unsigned);
+
+  return types_.void_;
+}
+
 // Create anonymous struct with anonymous fields. It's possible that there will
 // be multiple tuples of the same (duplicated) type but BTF deduplication should
 // take care of that.
@@ -255,6 +263,9 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
 
   if (stype.IsPtrTy())
     return getInt64Ty();
+
+  if (stype.IsVoidTy())
+    return getVoidTy();
 
   // Integer types and builtin types represented by integers
   switch (stype.GetSize()) {
