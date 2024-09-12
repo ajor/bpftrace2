@@ -210,6 +210,10 @@ void Visitor::visit(Subprog &subprog)
   }
 }
 
+void Visitor::visit(Import &)
+{
+}
+
 void Visitor::visit(Program &program)
 {
   for (Subprog *subprog : program.functions)

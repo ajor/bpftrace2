@@ -652,17 +652,36 @@ private:
 };
 using SubprogList = std::vector<Subprog *>;
 
+class Import : public Node {
+public:
+  DEFINE_ACCEPT
+
+  Import(std::string name);
+
+  void set_path(std::string path);
+
+  const std::string &name() const { return name_; }
+  const std::string &path() const { return path_; }
+
+private:
+  std::string name_;
+  std::string path_;
+};
+using ImportList = std::vector<Import *>;
+
 class Program : public Node {
 public:
   DEFINE_ACCEPT
 
   Program(const std::string &c_definitions,
           Config *config,
+          ImportList &&imports,
           SubprogList &&functions,
           ProbeList &&probes);
 
   std::string c_definitions;
   Config *config = nullptr;
+  ImportList imports;
   SubprogList functions;
   ProbeList probes;
 

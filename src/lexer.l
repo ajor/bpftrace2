@@ -159,6 +159,7 @@ bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, loc); }
 "break"                 { return Parser::make_BREAK(yytext, loc); }
 "sizeof"                { return Parser::make_SIZEOF(yytext, loc); }
 "offsetof"              { return Parser::make_OFFSETOF(yytext, loc); }
+"import"                { return Parser::make_IMPORT(yytext, loc); }
 
 {int_type}              { return Parser::make_INT_TYPE(yytext, loc); }
 {builtin_type}          { return Parser::make_BUILTIN_TYPE(yytext, loc); }

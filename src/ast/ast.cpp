@@ -46,6 +46,7 @@ MAKE_ACCEPT(Jump)
 MAKE_ACCEPT(Probe)
 MAKE_ACCEPT(SubprogArg)
 MAKE_ACCEPT(Subprog)
+MAKE_ACCEPT(Import)
 MAKE_ACCEPT(Program)
 
 #undef MAKE_ACCEPT
@@ -269,12 +270,21 @@ Subprog::Subprog(std::string name,
 {
 }
 
+Import::Import(std::string name) : name_(std::move(name)) {}
+
+void Import::set_path(std::string path)
+{
+  path_ = std::move(path);
+}
+
 Program::Program(const std::string &c_definitions,
                  Config *config,
+                 ImportList &&imports,
                  SubprogList &&functions,
                  ProbeList &&probes)
     : c_definitions(c_definitions),
       config(config),
+      imports(std::move(imports)),
       functions(std::move(functions)),
       probes(std::move(probes))
 {
