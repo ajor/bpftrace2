@@ -382,6 +382,12 @@ uint32_t get_type_tags(std::unordered_set<std::string> &tags,
 }
 } // namespace
 
+void resolve_fields(const struct btf *btf,
+                    uint32_t id,
+                    Struct *record,
+                    __u32 start_offset,
+                    StructManager &structs);
+
 SizedType get_stype(const struct btf *btf, uint32_t id, StructManager &structs)
 {
   const struct btf_type *t = btf__type_by_id(btf, id);
@@ -405,9 +411,10 @@ SizedType get_stype(const struct btf *btf, uint32_t id, StructManager &structs)
     std::string comp = btf_is_struct(t) ? "struct" : "union";
     std::string name = comp + " " + cast;
 
-    stype = CreateRecord(name, structs.LookupOrAdd(name, t->size));
-    //    if (resolve_structs)
-    //      resolve_fields(stype);
+    auto record = structs.LookupOrAdd(name, t->size).lock();
+    stype = CreateRecord(cast /*name*/, record);
+    //    if (resolve_structs) TODO
+      resolve_fields(btf, id, record.get(), 0, structs);
   } else if (btf_is_ptr(t)) {
     std::unordered_set<std::string> tags;
     auto id = get_type_tags(tags, btf, t->type);
@@ -838,7 +845,7 @@ void BTF::resolve_fields(SizedType &type)
   if (!type_id.btf)
     return;
 
-  resolve_fields(type_id, record.get(), 0);
+  btf::resolve_fields(type_id.btf, type_id.id, record.get(), 0, bpftrace_->structs);
 }
 
 static std::optional<Bitfield> resolve_bitfield(
@@ -853,17 +860,19 @@ static std::optional<Bitfield> resolve_bitfield(
                   bitfield_width);
 }
 
-void BTF::resolve_fields(const BTFId &type_id,
-                         Struct *record,
-                         __u32 start_offset)
+void resolve_fields(const struct btf *btf,
+                    uint32_t id,
+                    Struct *record,
+                    __u32 start_offset,
+                    StructManager &structs)
 {
-  auto btf_type = btf__type_by_id(type_id.btf, type_id.id);
+  auto btf_type = btf__type_by_id(btf, id);
   if (!btf_type)
     return;
   auto members = btf_members(btf_type);
   for (__u32 i = 0; i < BTF_INFO_VLEN(btf_type->info); i++) {
-    BTFId field_id{ .btf = type_id.btf, .id = members[i].type };
-    auto field_type = btf__type_by_id(field_id.btf, field_id.id);
+    uint32_t member_id = members[i].type;
+    auto field_type = btf__type_by_id(btf, member_id);
     if (!field_type) {
       LOG(ERROR) << "Inconsistent BTF data (no type found for id "
                  << members[i].type << ")";
@@ -871,19 +880,18 @@ void BTF::resolve_fields(const BTFId &type_id,
       break;
     }
 
-    std::string field_name = btf__name_by_offset(type_id.btf,
-                                                 members[i].name_off);
+    std::string field_name = btf__name_by_offset(btf, members[i].name_off);
 
     __u32 field_offset = start_offset + btf_member_bit_offset(btf_type, i) / 8;
 
     if (btf_is_composite(field_type) &&
         (field_name.empty() || field_name == "(anon)")) {
-      resolve_fields(field_id, record, field_offset);
+      resolve_fields(btf, member_id, record, field_offset, structs);
       continue;
     }
 
     record->AddField(field_name,
-                     get_stype(field_id),
+                     get_stype(btf, member_id, structs),
                      field_offset,
                      resolve_bitfield(btf_type, i),
                      false);

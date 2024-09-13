@@ -152,7 +152,6 @@ public:
 private:
   void load_kernel_btfs(const std::set<std::string>& modules);
   SizedType get_stype(const BTFId& btf_id, bool resolve_structs = true);
-  void resolve_fields(const BTFId& type_id, Struct* record, __u32 start_offset);
   static const struct btf_type* btf_type_skip_modifiers(
       const struct btf_type* t,
       const struct btf* btf);
