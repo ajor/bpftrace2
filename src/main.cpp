@@ -697,6 +697,50 @@ Args parse_args(int argc, char* argv[])
   return args;
 }
 
+static bool resolveImports(const ast::ImportList &imports,
+    const std::vector<std_filesystem::path>& searchPaths)
+{
+  bool all_ok = true;
+
+  for (ast::Import *import : imports) {
+    bool found = false;
+    for (const auto &dir : searchPaths) {
+      std::string importFileName = import->name() + ".bpf.o";
+      std_filesystem::path libPath = dir / importFileName;
+      if (!std_filesystem::exists(libPath))
+        continue;
+
+      import->set_path(libPath);
+
+      found = true;
+      break;
+    }
+
+    if (!found) {
+      LOG(ERROR) << "Imported library not found: " << import->name();
+      all_ok = false;
+    }
+  }
+
+  return all_ok;
+}
+
+static bool parseImports(const ast::ImportList &imports, BPFtrace &bpftrace)
+{
+  for (const ast::Import *import : imports) {
+    LibParser pp;
+    // TODO create namespaced types
+    pp.parse(
+        import->name(),
+        import->path(),
+        bpftrace.functions,
+        bpftrace.structs);
+  }
+
+  // TODO can we check parsing was successful?
+  return true;
+}
+
 int main(int argc, char* argv[])
 {
   int err;
@@ -900,23 +944,18 @@ int main(int argc, char* argv[])
 
   bpftrace.kfunc_recursion_check(ast_ctx->root);
 
-  //  for (ast::Import &import : ((ast::Program*)ast_root)->imports) {
-  LibParser pp;
-  //    std::string searchPath =
-  //    "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/31416c53092b91a6/scripts/jwiepert/bpf_lib/api/__api_provider__/out/";
-  //    std::string extension = ".bpf.o";
-  pp.parse(
-      "api_provider",
-      "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/0f9da91310218111/"
-      "scripts/jwiepert/bpf_lib/api/__api_provider__/out/api_provider.bpf.o",
-      bpftrace.functions,
-      bpftrace.structs);
-  pp.parse(
-      "tdigest",
-      "/home/ajor/fbsource/buck-out/v2/gen/fbcode/0f9da91310218111/scripts/dschatzberg/tdigest/__tdigest_lib__/out/tdigest_lib.bpf.o",
-      bpftrace.functions,
-      bpftrace.structs);
-  //  }
+  // TODO take these from command line arguments
+  // TODO default to some system directory
+  std::vector<std_filesystem::path> searchPaths = {
+    "/data/users/ajor/fbsource/buck-out/v2/gen/fbcode/0f9da91310218111/scripts/jwiepert/bpf_lib/api/__api_provider__/out/",
+    "/home/ajor/fbsource/buck-out/v2/gen/fbcode/0f9da91310218111/scripts/dschatzberg/tdigest/__tdigest_lib__/out/",
+  };
+  // TODO dodgy cast
+  if (!resolveImports(((ast::Program*)ast_ctx->root)->imports, searchPaths))
+    return 1;
+
+  if (!parseImports(((ast::Program*)ast_ctx->root)->imports, bpftrace))
+    return 1;
 
   auto pmresult = pm.Run(ast_ctx->root, ctx);
   if (!pmresult.Ok())
