@@ -52,6 +52,9 @@ public:
                                              const MapKey &key,
                                              const SizedType &value_type);
   DIGlobalVariableExpression *createGlobalInt64(std::string_view name);
+  DIGlobalVariableExpression *createGlobalString(
+    std::string_view name,
+    std::string_view contents);
 
   DIFile *file = nullptr;
 
@@ -64,7 +67,6 @@ private:
     DIType *int128 = nullptr;
     DIType *int8_ptr = nullptr;
     DIType *int_ = nullptr;
-    DIType *void_ = nullptr;
   } types_;
 
   // TODO delete?

@@ -162,10 +162,7 @@ DIType *DIBuilderBPF::getInt8PtrTy()
 
 DIType *DIBuilderBPF::getVoidTy()
 {
-  if (!types_.void_)
-    types_.void_ = createBasicType("void", 0, dwarf::DW_ATE_unsigned);
-
-  return types_.void_;
+  return nullptr;
 }
 
 // Create anonymous struct with anonymous fields. It's possible that there will
@@ -240,7 +237,23 @@ DIType *DIBuilderBPF::CreateMapStructType(const SizedType &stype)
 
 DIType *DIBuilderBPF::GetType(const SizedType &stype)
 {
-  if (stype.IsByteArray() || stype.IsRecordTy()) {
+  if (stype.IsRecordTy()) {
+    SmallVector<Metadata *, 8> fields;
+    for (const auto &field : stype.GetFields()) {
+      fields.push_back(createMemberType(file,
+                                        field.name,
+                                        file,
+                                        0,
+                                        field.type.GetSize() * 8,
+                                        0,
+                                        field.offset * 8,
+                                        DINode::FlagZero,
+                                        GetType(field.type)));
+    }
+    return createStructType(file, stype.GetName(), file, 0, stype.GetSize() * 8, 0, DINode::FlagZero, nullptr, getOrCreateArray(fields));
+  }
+
+  if (stype.IsByteArray()) {
     auto subrange = getOrCreateSubrange(0, stype.GetSize());
     return createArrayType(
         stype.GetSize() * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));
@@ -261,8 +274,9 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
       stype.IsStatsTy())
     return CreateMapStructType(stype);
 
-  if (stype.IsPtrTy())
-    return getInt64Ty();
+  if (stype.IsPtrTy()) {
+    return createPointerType(GetType(*stype.GetPointeeTy()), 64);
+  }
 
   if (stype.IsVoidTy())
     return getVoidTy();
@@ -373,6 +387,21 @@ DIGlobalVariableExpression *DIBuilderBPF::createGlobalInt64(
 {
   return createGlobalVariableExpression(
       file, name, "global", file, 0, getInt64Ty(), false);
+}
+
+DIGlobalVariableExpression *DIBuilderBPF::createGlobalString(
+    std::string_view name,
+    std::string_view contents)
+{
+  uint64_t len = contents.size() + 1;
+  auto *charArrayTy = createArrayType(
+        len * 8,
+        0,
+        getInt8Ty(),
+        getOrCreateArray({getOrCreateSubrange(0, len)}));
+
+  return createGlobalVariableExpression(
+      file, name, "global", file, 0, charArrayTy, false);
 }
 
 } // namespace bpftrace::ast
