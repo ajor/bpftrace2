@@ -163,6 +163,16 @@ void Printer::visit(Variable &var)
   out_ << indent << "variable: " << var.ident << type(var.type) << std::endl;
 }
 
+void Printer::visit(AddrOf &addrof)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "addrof: " << type(addrof.type) << std::endl;
+  ++depth_;
+  // TODO find a nicer way to avoid std::visit everywhere:
+  std::visit([this](auto &&expr) { expr->accept(*this); }, addrof.expr);
+  --depth_;
+}
+
 void Printer::visit(Binop &binop)
 {
   std::string indent(depth_, ' ');

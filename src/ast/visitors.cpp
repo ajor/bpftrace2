@@ -58,6 +58,11 @@ void Visitor::visit(Variable &var __attribute__((__unused__)))
 {
 }
 
+void Visitor::visit(AddrOf &addrof)
+{
+  std::visit([this](auto &&expr) { Visit(*expr); }, addrof.expr);
+}
+
 void Visitor::visit(Binop &binop)
 {
   Visit(*binop.left);

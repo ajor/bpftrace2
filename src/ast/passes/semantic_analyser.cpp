@@ -556,6 +556,27 @@ void SemanticAnalyser::visit(Call &call)
     // TODO check parameters match up here...
     call.type = func->returnType();
     foundFunc = true;
+
+    if (call.vargs.size() != func->params().size()) {
+      LOG(ERROR) << "WRONG NUMBER OF ARGUMENTS";
+      return;
+    }
+    for (size_t i = 0; i < func->params().size(); ++i) {
+      const auto &param = func->params()[i];
+      if (!param.type().IsPtrTy() || is_final_pass()) // nasty
+        continue;
+
+      // Convert our variable or map into a pointer
+      auto &arg = *call.vargs[i];
+      if (arg.is_variable) {
+        call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Variable *>(&arg));
+      } else if (arg.is_map) {
+        call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Map *>(&arg));
+      } else {
+        LOG(ERROR) << "CAN'T USE EXPRESSION as a reference";
+        return;
+      }
+    }
   }
 
   // TODO make this unsafe check work with FunctionRegistry
@@ -609,6 +630,10 @@ void SemanticAnalyser::visit(Call &call)
                                    << ap->provider << "\" probes";
       }
     }
+  }
+
+  if (foundFunc) {
+    return; // hack
   }
 
   if (call.func == "hist") {
@@ -1424,8 +1449,6 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   } else {
-    if (foundFunc)
-      return; // hack
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";
     call.type = CreateNone();
   }

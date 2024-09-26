@@ -508,32 +508,33 @@ void CodegenLLVM::visit(Call &call)
     call.type = func->returnType();
     foundFunc = true;
 
-    // create function declaration
-    std::vector<llvm::Type*> funcaa_params;
-    funcaa_params.reserve(func->params().size());
-    for (const auto &param : func->params()) {
-      funcaa_params.push_back(b_.GetType(param.type()));
+    // HACK TODO: Only generate one declaration for each function
+    static std::unordered_map<std::string, Function*> genedFucns;
+    if (genedFucns.find(call.func) == genedFucns.end()) {
+
+      // create function declaration
+      std::vector<llvm::Type*> funcaa_params;
+      funcaa_params.reserve(func->params().size());
+      for (const auto &param : func->params()) {
+        funcaa_params.push_back(b_.GetType(param.type()));
+      }
+
+      FunctionType *funcaa_type = FunctionType::get(
+          b_.GetType(func->returnType()), funcaa_params, false);
+      Function *funcaa = Function::Create(
+          funcaa_type, Function::ExternalLinkage, func->name(), module_.get());
+
+      // TODO our elf files contain too many sections (no need for .debug*, .rel.debug*, .rel.BTF)
+
+  //    funcaa->setDSOLocal(true);
+  //    funcaa->setVisibility(llvm::GlobalValue::DefaultVisibility);
+      funcaa->setSection(".text");
+      funcaa->setDoesNotThrow();
+      funcaa->addFnAttr(Attribute::NoInline);
+
+      debug_.createFunctionDebugInfo(*funcaa, func->returnType(), func->params());
+      genedFucns.insert({call.func, funcaa});
     }
-
-    FunctionType *funcaa_type = FunctionType::get(
-        b_.GetType(func->returnType()), funcaa_params, false);
-    Function *funcaa = Function::Create(
-        funcaa_type, Function::ExternalLinkage, func->name(), module_.get());
-
-    // TODO our elf files contain too many sections (no need for .debug*, .rel.debug*, .rel.BTF)
-
-//    funcaa->setDSOLocal(true);
-//    funcaa->setVisibility(llvm::GlobalValue::DefaultVisibility);
-    funcaa->setSection(".text");
-    funcaa->setDoesNotThrow();
-    funcaa->addFnAttr(Attribute::NoInline);
-    debug_.createFunctionDebugInfo(*funcaa, func->returnType(), func->params());
-
-//  auto ip = b_.saveIP();
-//  auto *bbaa = BasicBlock::Create(module_->getContext(), "entryaaTODO", funcaa);
-//  b_.SetInsertPoint(bbaa);
-//  b_.CreateRet(b_.getInt64(123));
-//  b_.restoreIP(ip);
 
     std::vector<Value*> funcaa_args;
     funcaa_args.reserve(call.vargs.size());
@@ -543,7 +544,7 @@ void CodegenLLVM::visit(Call &call)
     }
 
     // call function
-    Value *result = b_.CreateCall(funcaa, funcaa_args);
+    Value *result = b_.CreateCall(genedFucns[call.func], funcaa_args);
     expr_ = result;
   }
 
@@ -1547,6 +1548,24 @@ void CodegenLLVM::visit(Variable &var)
     auto &var_llvm = variables_[var.ident];
     expr_ = b_.CreateLoad(var_llvm.type, var_llvm.value);
   }
+}
+
+// TODO put this somewhere common
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+
+void CodegenLLVM::visit(AddrOf &addrof)
+{
+  std::visit(overloaded{
+      //[](const auto expr) { static_assert(false, "non-exhaustive visitor"); },
+      [this](Variable *var) { expr_ = variables_[var->ident].value; },
+      [this](Map *map) {
+        auto [key, scoped_key_deleter] = getMapKey(*map);
+        expr_ = b_.CreateMapLookupElemAddr(ctx_, map->ident, key, map->type, map->loc);
+      },
+  }, addrof.expr);
 }
 
 std::pair<Value *, uint64_t> CodegenLLVM::getString(Expression *expr)
