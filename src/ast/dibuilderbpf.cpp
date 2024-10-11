@@ -237,7 +237,12 @@ DIType *DIBuilderBPF::CreateMapStructType(const SizedType &stype)
 
 DIType *DIBuilderBPF::GetType(const SizedType &stype)
 {
+  if (auto it = aaatypes_.find(&stype); it != aaatypes_.end())
+    return it->second;
+
   if (stype.IsRecordTy()) {
+    auto *type = createStructTypeBPF(stype);
+
     SmallVector<Metadata *, 8> fields;
     for (const auto &field : stype.GetFields()) {
       fields.push_back(createMemberType(file,
@@ -250,7 +255,9 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
                                         DINode::FlagZero,
                                         GetType(field.type)));
     }
-    return createStructType(file, stype.GetName(), file, 0, stype.GetSize() * 8, 0, DINode::FlagZero, nullptr, getOrCreateArray(fields));
+
+    type->replaceElements(getOrCreateArray(fields));
+    return type;
   }
 
   if (stype.IsByteArray()) {
@@ -402,6 +409,13 @@ DIGlobalVariableExpression *DIBuilderBPF::createGlobalString(
 
   return createGlobalVariableExpression(
       file, name, "global", file, 0, charArrayTy, false);
+}
+
+DICompositeType *DIBuilderBPF::createStructTypeBPF(const SizedType &stype)
+{
+  auto *t = createStructType(file, stype.GetName(), file, 0, stype.GetSize() * 8, 0, DINode::FlagZero, nullptr, getOrCreateArray({}));
+  aaatypes_.insert({&stype, t});
+  return t;
 }
 
 } // namespace bpftrace::ast

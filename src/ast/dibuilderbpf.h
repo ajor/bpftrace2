@@ -42,6 +42,7 @@ public:
   DIType *createPointerMemberType(const std::string &name,
                                   uint64_t offset,
                                   DIType *type);
+  DICompositeType *createStructTypeBPF(const SizedType &stype);
   DIType *GetMapKeyType(const MapKey &key,
                         const SizedType &value_type,
                         libbpf::bpf_map_type map_type);
@@ -69,8 +70,7 @@ private:
     DIType *int_ = nullptr;
   } types_;
 
-  // TODO delete?
-  std::unordered_map<std::string, DIType *> structs_;
+  std::unordered_map<const SizedType *, DIType *> aaatypes_;
 };
 
 } // namespace ast
