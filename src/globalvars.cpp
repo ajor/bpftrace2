@@ -60,10 +60,10 @@ void update_global_vars(const struct bpf_object *bpf_object,
 
     std::string_view name = btf__name_by_offset(self_btf, type_id->name_off);
 
+    // Only deal with bpftrace's known global variables. Other global variables
+    // could come from imported BPF libraries.
     if (vars_and_offsets.find(name) != vars_and_offsets.end()) {
       vars_and_offsets[name] = member->offset;
-    } else {
-      LOG(BUG) << "Unknown global variable " << name;
     }
   }
 
