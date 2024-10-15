@@ -288,8 +288,8 @@ public:
 
   size_t GetNumElements() const
   {
-    assert(IsArrayTy() || IsStringTy());
-    return IsStringTy() ? size_bits_ : size_bits_ / element_type_->size_bits_;
+    assert(IsArrayTy());
+    return size_bits_ / element_type_->size_bits_;
   };
 
   const std::string GetName() const
