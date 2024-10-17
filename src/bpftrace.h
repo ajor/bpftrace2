@@ -272,6 +272,13 @@ private:
   mutable FuncsModulesMap traceable_funcs_;
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
+
+  bool initImports(/*const ast::ImportList &imports, */BpfBytecode &bytecode);
+
+public: // TODO not public
+  using handle_sample_func_type = int(*)(void*, void*, void*, size_t);
+  std::unordered_map<std::string, void*> module_handles_;
+  std::unordered_map<std::string, handle_sample_func_type> module_type_funcs_;
 };
 
 } // namespace bpftrace

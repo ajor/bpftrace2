@@ -1,3 +1,5 @@
+#include <dlfcn.h>
+
 #include "btf.h"
 #include <algorithm>
 #include <arpa/inet.h>
@@ -918,6 +920,45 @@ int BPFtrace::prerun() const
   return 0;
 }
 
+// TODO don't include this here... define a common API
+struct pystacks_opts {
+  size_t pidCount = 0;
+  pid_t* pids = nullptr;
+};
+
+bool BPFtrace::initImports(/*const ast::ImportList &imports, */BpfBytecode &bytecode)
+{
+//  for (const ast::Import *import : imports) {
+    void *module_handle = dlopen("/home/ajor/fbsource/buck-out/v2/gen/fbcode/dd87842f816b119f/strobelight/bpf_lib/python/__pystacks__/pystacks", RTLD_LAZY | RTLD_LOCAL);
+    if (!module_handle) {
+      // TODO log error
+      LOG(ERROR) << dlerror();
+      return false;
+    }
+
+    pystacks_opts opts = {};
+
+    using init_func_type = void*(*)(struct bpf_object*, struct pystacks_opts&);
+
+    LOG(ERROR) << "III: " << bytecode.raw_objHACK() << " " << &opts;
+
+    // TODO check this cast:
+    auto *init_func = (init_func_type)dlsym(module_handle, "pystacks_init");
+    if (init_func) {
+      // TODO save this returned handle and de-init it when done
+      void *ret = init_func(bytecode.raw_objHACK(), opts);
+      module_handles_["pystacks"] = ret;
+    }
+
+    auto *handle_sample_func = (handle_sample_func_type)dlsym(module_handle, "pystacks_symbolize_stack");
+    if (handle_sample_func) {
+      module_type_funcs_["pystacks_stack"] = handle_sample_func;
+    }
+//  }
+
+  return true;
+}
+
 int BPFtrace::run(BpfBytecode bytecode)
 {
   int err = prerun();
@@ -941,6 +982,9 @@ int BPFtrace::run(BpfBytecode bytecode)
     LOG(ERROR) << e.what();
     return -1;
   }
+
+  if (!initImports(/*((ast::Program*)ast_ctx->root)->imports, */bytecode_))
+    return 1;
 
   err = setup_output();
   if (err)
