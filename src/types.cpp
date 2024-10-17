@@ -32,34 +32,40 @@ std::ostream &operator<<(std::ostream &os, ProbeType type)
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
+  os << typestr(type);
+  return os;
+}
+
+std::string typestr(const SizedType &type)
+{
   if (type.IsRecordTy()) {
-    os << type.GetName();
+    return type.GetName();
   } else if (type.IsPtrTy()) {
+    std::string res;
     if (type.IsCtxAccess())
-      os << "(ctx) ";
-    os << *type.GetPointeeTy() << " *";
+      res = "(ctx) ";
+    res += typestr(*type.GetPointeeTy()) + " *";
+    return res;
   } else if (type.IsRefTy()) {
-    os << *type.GetDereferencedTy() << " &";
+    return typestr(*type.GetDereferencedTy()) + " &";
   } else if (type.IsIntTy()) {
-    os << (type.is_signed_ ? "" : "u") << "int" << 8 * type.GetSize();
+    return (type.is_signed_ ? "int" : "uint") + std::to_string(8 * type.GetSize());
   } else if (type.IsArrayTy()) {
-    os << *type.GetElementTy() << "[" << type.GetNumElements() << "]";
+    return typestr(*type.GetElementTy()) + "[" + std::to_string(type.GetNumElements()) + "]";
   } else if (type.IsStringTy() || type.IsBufferTy()) {
-    os << type.GetTy() << "[" << type.GetSize() << "]";
+    return typestr(type.GetTy()) + "[" + std::to_string(type.GetSize()) + "]";
   } else if (type.IsTupleTy()) {
-    os << "(";
+    std::string res = "(";
     size_t n = type.GetFieldCount();
     for (size_t i = 0; i < n; ++i) {
-      os << type.GetField(i).type;
+      res += typestr(type.GetField(i).type);
       if (i != n - 1)
-        os << ",";
+        res += ",";
     }
-    os << ")";
-  } else {
-    os << type.GetTy();
+    res += ")";
+    return res;
   }
-
-  return os;
+  return typestr(type.GetTy());
 }
 
 bool SizedType::IsSameType(const SizedType &t) const
