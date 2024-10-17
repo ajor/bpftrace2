@@ -574,7 +574,7 @@ void SemanticAnalyser::visit(Call &call)
         call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Map *>(&arg));
       } else {
         LOG(ERROR) << "CAN'T USE EXPRESSION as a reference";
-        return;
+        //return;
       }
     }
   }
