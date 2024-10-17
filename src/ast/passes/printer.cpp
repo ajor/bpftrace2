@@ -458,7 +458,6 @@ void Printer::visit(Import &import)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "import: " << import.name() << std::endl;
-  out_ << indent << " " << import.path() << std::endl;
 }
 
 void Printer::visit(Program &program)
