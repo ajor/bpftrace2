@@ -55,6 +55,8 @@ public:
   btf::BtfObject btf() const;
   std::span<const std::byte> elf() const;
 
+  struct bpf_object *raw_objHACK() { return bpf_object_.get(); }
+
 private:
   void prepare_progs(const std::vector<Probe> &probes,
                      const btf::BTF &btf,

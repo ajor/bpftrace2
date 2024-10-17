@@ -179,6 +179,8 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
                                        '\0');
     auto &log_buf = log_bufs[name];
     bpf_program__set_log_buf(prog.bpf_prog(), log_buf.data(), log_buf.size());
+
+//    bpf_program__set_flags(prog.bpf_prog(), bpf_program__flags(prog.bpf_prog()) | BPF_F_SLEEPABLE);
   }
 
   prepare_progs(resources.probes, btf, feature, config);
