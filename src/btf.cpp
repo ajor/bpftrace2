@@ -406,15 +406,24 @@ SizedType get_stype(const struct btf *btf, uint32_t id, StructManager &structs)
     stype = CreateInteger(t->size * 8, false);
   } else if (btf_is_composite(t)) {
     std::string cast = btf_str(btf, t->name_off);
-    if (cast.empty() || cast == "(anon)")
-      return CreateNone();
+//    if (cast.empty() || cast == "(anon)") {
+//      auto record = structs.AddAnonymousStruct({}, {}).lock();
+//      stype = CreateRecord(cast, record);
+//      resolve_fields(btf, id, record.get(), 0, structs);
+//      return stype;
+//    }
+
     std::string comp = btf_is_struct(t) ? "struct" : "union";
     std::string name = comp + " " + cast;
 
-    auto record = structs.LookupOrAdd(name, t->size).lock();
-    stype = CreateRecord(cast /*name*/, record);
-    //    if (resolve_structs) TODO
-      resolve_fields(btf, id, record.get(), 0, structs);
+    if (auto record2 = structs.Lookup(cast /*name*/).lock()) {
+      stype = CreateRecord(cast /*name*/, record2);
+    } else {
+      auto record = structs.Add(cast /*name*/, t->size).lock();
+      stype = CreateRecord(cast /*name*/, record);
+      //    if (resolve_structs) TODO
+        resolve_fields(btf, id, record.get(), 0, structs);
+    }
   } else if (btf_is_ptr(t)) {
     std::unordered_set<std::string> tags;
     auto id = get_type_tags(tags, btf, t->type);
