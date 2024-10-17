@@ -273,11 +273,6 @@ Subprog::Subprog(std::string name,
 
 Import::Import(std::string name) : name_(std::move(name)) {}
 
-void Import::set_path(std::string path)
-{
-  path_ = std::move(path);
-}
-
 Program::Program(const std::string &c_definitions,
                  Config *config,
                  ImportList &&imports,

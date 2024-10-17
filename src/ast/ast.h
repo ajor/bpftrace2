@@ -668,14 +668,10 @@ public:
 
   Import(std::string name);
 
-  void set_path(std::string path);
-
   const std::string &name() const { return name_; }
-  const std::string &path() const { return path_; }
 
 private:
   std::string name_;
-  std::string path_;
 };
 using ImportList = std::vector<Import *>;
 
