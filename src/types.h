@@ -289,6 +289,8 @@ public:
   size_t GetNumElements() const
   {
     assert(IsArrayTy());
+    if (size_bits_ == 0) // TODO add a test for this - it's to prevent arrays of 0-size elements causing a division by zero error
+      return 0;
     return size_bits_ / element_type_->size_bits_;
   };
 
