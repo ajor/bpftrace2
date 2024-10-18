@@ -502,7 +502,7 @@ void CodegenLLVM::visit(Call &call)
 {
   // TODO don't perform the lookup again here - cache it in the AST?
   bool foundFunc = false;
-  if (auto *func = bpftrace_.functions.get(call.func)) {
+  if (auto *func = call.function) {
     LOG(ERROR) << "found a function!";
     // TODO check parameters match up here...
     call.type = func->returnType();

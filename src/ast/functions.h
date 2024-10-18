@@ -67,8 +67,7 @@ public:
       std::string_view name,
       const SizedType &returnType,
       std::vector<Param> params);
-  const Function* get(const std::string &name) const;
-  const Function* get(const std::string &name, const std::vector<Param> &params) const;
+  const Function* get(const std::string &name, const std::vector<SizedType> &arg_types) const;
 
 private:
   std::unordered_map<std::string, std::vector<std::reference_wrapper<Function>>> funcs_by_fq_name_;

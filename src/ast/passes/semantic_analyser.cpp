@@ -550,35 +550,6 @@ bool skip_key_validation(const Call &call)
 
 void SemanticAnalyser::visit(Call &call)
 {
-  bool foundFunc = false;
-  if (auto *func = bpftrace_.functions.get(call.func)) {
-    LOG(ERROR) << "found a function!";
-    // TODO check parameters match up here...
-    call.type = func->returnType();
-    foundFunc = true;
-
-    if (call.vargs.size() != func->params().size()) {
-      LOG(ERROR) << "WRONG NUMBER OF ARGUMENTS";
-      return;
-    }
-    for (size_t i = 0; i < func->params().size(); ++i) {
-      const auto &param = func->params()[i];
-      if (!param.type().IsPtrTy() || is_final_pass()) // nasty
-        continue;
-
-      // Convert our variable or map into a pointer
-      auto &arg = *call.vargs[i];
-      if (arg.is_variable) {
-        call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Variable *>(&arg));
-      } else if (arg.is_map) {
-        call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Map *>(&arg));
-      } else {
-        LOG(ERROR) << "CAN'T USE EXPRESSION as a reference";
-        //return;
-      }
-    }
-  }
-
   // TODO make this unsafe check work with FunctionRegistry
   // Check for unsafe-ness first. It is likely the most pertinent issue
   // (and should be at the top) for any function call.
@@ -620,6 +591,42 @@ void SemanticAnalyser::visit(Call &call)
 
     Visit(call.vargs[i]);
   }
+
+  std::vector<SizedType> arg_types;
+  arg_types.reserve(call.vargs.size());
+  for (const auto &arg : call.vargs) {
+    arg_types.push_back(arg->type);
+  }
+
+  bool foundFunc = false;
+  if (auto *func = bpftrace_.functions.get(call.func, arg_types)) {
+    foundFunc = true;
+
+    call.function = func;
+    call.type = func->returnType();
+
+    if (call.vargs.size() != func->params().size()) {
+      LOG(ERROR) << "WRONG NUMBER OF ARGUMENTS";
+      return;
+    }
+    for (size_t i = 0; i < func->params().size(); ++i) {
+      const auto &param = func->params()[i];
+      if (!param.type().IsPtrTy() || is_final_pass()) // nasty
+        continue;
+
+      // Convert our variable or map into a pointer
+      auto &arg = *call.vargs[i];
+      if (arg.is_variable) {
+        call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Variable *>(&arg));
+      } else if (arg.is_map) {
+        call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Map *>(&arg));
+      } else {
+        LOG(ERROR) << "CAN'T USE EXPRESSION as a reference";
+        //return;
+      }
+    }
+  }
+
 
 
   // TODO make this work with FunctionRegistry
