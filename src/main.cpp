@@ -713,7 +713,7 @@ static bool resolve_imports(const ast::ImportList &imports,
 
       std::string userlandLibFileName = import_node->name() + ".so";
       std_filesystem::path userlandLibPath = dir / userlandLibFileName;
-      if (std_filesystem::exists(libPath))
+      if (std_filesystem::exists(userlandLibPath))
         bpftrace.add_import(Import{import_node->name(), libPath, userlandLibPath});
       else
         bpftrace.add_import(Import{import_node->name(), libPath});
