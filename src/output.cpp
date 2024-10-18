@@ -297,10 +297,10 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     if (type.GetName() == "pystacks_message") {
       // !!!HACK!!! - resolve with pystacks
 
-      LOG(WARNING) << "Sz: " << value.size();
-      for (uint8_t val : value) {
-        LOG(WARNING) << std::to_string(val);
-      }
+//      LOG(WARNING) << "Sz: " << value.size();
+//      for (uint8_t val : value) {
+//        LOG(WARNING) << std::to_string(val);
+//      }
 
       auto *handle_samples = bpftrace.module_type_funcs_["pystacks_stack"];
       assert(handle_samples);
@@ -310,10 +310,10 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
 
       std::array<struct stack_walker_frame, 512> stack;
 
-      LOG(WARNING) << "bpftrace::::" << pystacks_handle << " " << value.data() << " " << stack.data();
+//      LOG(WARNING) << "bpftrace::::" << pystacks_handle << " " << value.data() << " " << stack.data();
 
       int stackCount = handle_samples(pystacks_handle, value.data(), stack.data(), stack.size());
-      LOG(WARNING) << "stack count: " << stackCount;
+//      LOG(WARNING) << "stack count: " << stackCount;
 
       std::string symbolicated_stack;
       for (int i=0; i<stackCount; i++) {
