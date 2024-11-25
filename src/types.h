@@ -304,6 +304,7 @@ public:
     // if it's being resolved in a later AST pass e.g. for an imported type:
     // `let $x: struct Foo[10];`
     return IsStringTy() ? size_bits_ : num_elements_;
+    // TODO makes no sense for strings
   };
 
   const std::string GetName() const
@@ -491,8 +492,7 @@ public:
 
   bool NeedsPercpuMap() const;
 
-  friend std::ostream &operator<<(std::ostream &, const SizedType &);
-  friend std::ostream &operator<<(std::ostream &, Type);
+  friend std::string typestr(const SizedType &type);
 
   void IntoPointer()
   {
@@ -655,6 +655,7 @@ const std::vector<ProbeItem> PROBE_LIST = {
 ProbeType probetype(const std::string &type);
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
+std::string typestr(const SizedType &type);
 std::string expand_probe_name(const std::string &orig_name);
 std::string probetypeName(ProbeType t);
 
