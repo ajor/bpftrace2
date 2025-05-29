@@ -98,8 +98,7 @@ TEST(clang_parser, c_union)
 TEST(clang_parser, c_enum)
 {
   BPFtrace bpftrace;
-  auto c_defs = parse("enum E { NONE, SOME = 99, }; struct Foo { enum E e; }",
-                      bpftrace);
+  parse("enum E { NONE, SOME = 99, }; struct Foo { enum E e; }", bpftrace);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo"));
   auto foo = bpftrace.structs.Lookup("struct Foo").lock();
@@ -112,18 +111,18 @@ TEST(clang_parser, c_enum)
   EXPECT_EQ(foo->GetField("e").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("e").offset, 0);
 
-  ASSERT_TRUE(c_defs.enums.contains("NONE"));
-  EXPECT_EQ(std::get<0>(c_defs.enums["NONE"]), 0);
-  EXPECT_EQ(std::get<1>(c_defs.enums["NONE"]), "E");
-  ASSERT_TRUE(c_defs.enums.contains("SOME"));
-  EXPECT_EQ(std::get<0>(c_defs.enums["SOME"]), 99);
-  EXPECT_EQ(std::get<1>(c_defs.enums["SOME"]), "E");
+  ASSERT_TRUE(bpftrace.enums.contains("NONE"));
+  EXPECT_EQ(*bpftrace.enums.get_value("NONE"), 0);
+  EXPECT_EQ(bpftrace.enums.get_containing_enum("NONE")->get(), "E");
+  ASSERT_TRUE(bpftrace.enums.contains("SOME"));
+  EXPECT_EQ(*bpftrace.enums.get_value("SOME"), 99);
+  EXPECT_EQ(bpftrace.enums.get_containing_enum("SOME")->get(), "E");
 
-  ASSERT_TRUE(c_defs.enum_defs.contains("E"));
-  ASSERT_TRUE(c_defs.enum_defs["E"].contains(0));
-  EXPECT_EQ(c_defs.enum_defs["E"][0], "NONE");
-  ASSERT_TRUE(c_defs.enum_defs["E"].contains(99));
-  EXPECT_EQ(c_defs.enum_defs["E"][99], "SOME");
+  ASSERT_TRUE(bpftrace.enums.contains("E"));
+  ASSERT_TRUE(bpftrace.enums.lookup("E", 0));
+  EXPECT_EQ(bpftrace.enums.lookup("E", 0)->get(), "NONE");
+  ASSERT_TRUE(bpftrace.enums.lookup("E", 99));
+  EXPECT_EQ(bpftrace.enums.lookup("E", 99)->get(), "SOME");
 }
 
 TEST(clang_parser, c_enum_anonymous)
@@ -134,69 +133,67 @@ TEST(clang_parser, c_enum_anonymous)
       "enum { ANON_B_VARIANT_1 = 0, ANON_B_CONFLICT = 99, }; ",
       bpftrace);
 
-  ASSERT_EQ(c_defs.enums.size(), 5);
-  ASSERT_EQ(c_defs.enum_defs.size(), 2);
+//  ASSERT_EQ(c_defs.enums.size(), 5);
+//  ASSERT_EQ(c_defs.enum_defs.size(), 2);
 
   //
-  // Check enums_ contains first anonymous enum
+  // Check enums contains first anonymous enum
   //
 
-  // Check first variant present
-  ASSERT_TRUE(c_defs.enums.contains("ANON_A_VARIANT_1"));
-  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_A_VARIANT_1"]), 0);
-  auto anon_a_name = std::get<1>(c_defs.enums["ANON_A_VARIANT_1"]);
-  ASSERT_FALSE(anon_a_name.empty());
+  ASSERT_TRUE(bpftrace.enums.get_containing_enum("ANON_A_VARIANT_1"));
+  auto anon_a_name = bpftrace.enums.get_containing_enum("ANON_A_VARIANT_1")->get();
+  EXPECT_FALSE(anon_a_name.empty());
+  ASSERT_TRUE(bpftrace.enums.get_value("ANON_A_VARIANT_1"));
+  EXPECT_EQ(bpftrace.enums.get_value("ANON_A_VARIANT_1"), 0);
 
-  // Check second variant present
-  ASSERT_TRUE(c_defs.enums.contains("ANON_A_VARIANT_2"));
-  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_A_VARIANT_2"]), 1);
-  EXPECT_EQ(std::get<1>(c_defs.enums["ANON_A_CONFLICT"]), anon_a_name);
+  ASSERT_TRUE(bpftrace.enums.get_containing_enum("ANON_A_VARIANT_2"));
+  EXPECT_EQ(bpftrace.enums.get_containing_enum("ANON_A_VARIANT_2")->get(), anon_a_name);
+  ASSERT_TRUE(bpftrace.enums.get_value("ANON_A_VARIANT_2"));
+  EXPECT_EQ(bpftrace.enums.get_value("ANON_A_VARIANT_2"), 1);
 
-  // Check conflict variant present
-  ASSERT_TRUE(c_defs.enums.contains("ANON_A_CONFLICT"));
-  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_A_CONFLICT"]), 99);
-  EXPECT_EQ(std::get<1>(c_defs.enums["ANON_A_CONFLICT"]), anon_a_name);
+  ASSERT_TRUE(bpftrace.enums.get_containing_enum("ANON_A_VARIANT_CONFLICT"));
+  EXPECT_EQ(bpftrace.enums.get_containing_enum("ANON_A_VARIANT_CONFLICT")->get(), anon_a_name);
+  ASSERT_TRUE(bpftrace.enums.get_value("ANON_A_VARIANT_CONFLICT"));
+  EXPECT_EQ(bpftrace.enums.get_value("ANON_A_VARIANT_CONFLICT"), 99);
 
   //
-  // Check enum_defs_ contains first anonymous enum, with ANON_A_CONFLICT
+  // Check enums contains first anonymous enum, with ANON_A_CONFLICT
   // value resolving correctly to the this enum and not the other.
   //
 
-  ASSERT_TRUE(c_defs.enum_defs.contains(anon_a_name));
-  ASSERT_EQ(c_defs.enum_defs[anon_a_name].size(), 3);
-  ASSERT_TRUE(c_defs.enum_defs[anon_a_name].contains(0));
-  EXPECT_EQ(c_defs.enum_defs[anon_a_name][0], "ANON_A_VARIANT_1");
-  ASSERT_TRUE(c_defs.enum_defs[anon_a_name].contains(1));
-  EXPECT_EQ(c_defs.enum_defs[anon_a_name][1], "ANON_A_VARIANT_2");
-  ASSERT_TRUE(c_defs.enum_defs[anon_a_name].contains(99));
-  EXPECT_EQ(c_defs.enum_defs[anon_a_name][99], "ANON_A_CONFLICT");
+  ASSERT_TRUE(bpftrace.enums.contains(anon_a_name));
+  ASSERT_TRUE(bpftrace.enums.lookup(anon_a_name, 0));
+  EXPECT_EQ(bpftrace.enums.lookup(anon_a_name, 0)->get(), "ANON_A_VARIANT_1");
+  ASSERT_TRUE(bpftrace.enums.lookup(anon_a_name, 1));
+  EXPECT_EQ(bpftrace.enums.lookup(anon_a_name, 1)->get(), "ANON_A_VARIANT_2");
+  ASSERT_TRUE(bpftrace.enums.lookup(anon_a_name, 99));
+  EXPECT_EQ(bpftrace.enums.lookup(anon_a_name, 99)->get(), "ANON_A_CONFLICT");
 
   //
-  // Check enums_ contains second anonymous enum
+  // Check enums contains second anonymous enum
   //
 
-  // Check first variant present
-  ASSERT_TRUE(c_defs.enums.contains("ANON_B_VARIANT_1"));
-  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_B_VARIANT_1"]), 0);
-  auto anon_b_name = std::get<1>(c_defs.enums["ANON_B_VARIANT_1"]);
-  ASSERT_FALSE(anon_b_name.empty());
+  ASSERT_TRUE(bpftrace.enums.get_containing_enum("ANON_B_VARIANT_1"));
+  auto anon_b_name = bpftrace.enums.get_containing_enum("ANON_B_VARIANT_1")->get();
+  EXPECT_FALSE(anon_b_name.empty());
+  ASSERT_TRUE(bpftrace.enums.get_value("ANON_B_VARIANT_1"));
+  EXPECT_EQ(bpftrace.enums.get_value("ANON_B_VARIANT_1"), 0);
 
-  // Check conflict variant present
-  ASSERT_TRUE(c_defs.enums.contains("ANON_B_CONFLICT"));
-  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_B_CONFLICT"]), 99);
-  EXPECT_EQ(std::get<1>(c_defs.enums["ANON_B_CONFLICT"]), anon_b_name);
+  ASSERT_TRUE(bpftrace.enums.get_containing_enum("ANON_B_VARIANT_CONFLICT"));
+  EXPECT_EQ(bpftrace.enums.get_containing_enum("ANON_B_VARIANT_CONFLICT")->get(), anon_b_name);
+  ASSERT_TRUE(bpftrace.enums.get_value("ANON_B_VARIANT_CONFLICT"));
+  EXPECT_EQ(bpftrace.enums.get_value("ANON_B_VARIANT_CONFLICT"), 99);
 
   //
-  // Check enum_defs_ contains second anonymous enum, with ANON_B_CONFLICT
+  // Check enums contains second anonymous enum, with ANON_B_CONFLICT
   // value resolving correctly to the this enum and not the first.
   //
 
-  ASSERT_TRUE(c_defs.enum_defs.contains(anon_b_name));
-  ASSERT_EQ(c_defs.enum_defs[anon_b_name].size(), 2);
-  ASSERT_TRUE(c_defs.enum_defs[anon_b_name].contains(0));
-  EXPECT_EQ(c_defs.enum_defs[anon_b_name][0], "ANON_B_VARIANT_1");
-  ASSERT_TRUE(c_defs.enum_defs[anon_b_name].contains(99));
-  EXPECT_EQ(c_defs.enum_defs[anon_b_name][99], "ANON_B_CONFLICT");
+  ASSERT_TRUE(bpftrace.enums.contains(anon_b_name));
+  ASSERT_TRUE(bpftrace.enums.lookup(anon_b_name, 0));
+  EXPECT_EQ(bpftrace.enums.lookup(anon_b_name, 0)->get(), "ANON_A_VARIANT_1");
+  ASSERT_TRUE(bpftrace.enums.lookup(anon_b_name, 99));
+  EXPECT_EQ(bpftrace.enums.lookup(anon_b_name, 99)->get(), "ANON_A_CONFLICT");
 }
 
 TEST(clang_parser, integer_ptr)

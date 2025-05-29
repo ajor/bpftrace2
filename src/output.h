@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "bpfmap.h"
-#include "clang_parser.h"
+#include "enums.h"
 #include "required_resources.h"
 #include "types.h"
 
@@ -39,19 +39,19 @@ std::ostream &operator<<(std::ostream &out, MessageType type);
 // virtual methods.
 class Output {
 public:
-  explicit Output(CDefinitions &c_definitions,
+  explicit Output(EnumRegistry &enums,
                   std::ostream &out = std::cout,
                   std::ostream &err = std::cerr)
-      : c_definitions_(c_definitions), out_(out), err_(err)
+      : enums_(enums), out_(out), err_(err)
   {
   }
   Output(const Output &) = delete;
   Output &operator=(const Output &) = delete;
   virtual ~Output() = default;
 
-  virtual const CDefinitions &c_definitions() const
+  virtual const EnumRegistry &enums() const
   {
-    return c_definitions_;
+    return enums_;
   }
   virtual std::ostream &outputstream() const
   {
@@ -99,7 +99,7 @@ public:
   virtual void helper_error(int retcode, const HelperErrorInfo &info) const = 0;
 
 protected:
-  CDefinitions &c_definitions_;
+  EnumRegistry &enums_;
   std::ostream &out_;
   std::ostream &err_;
   void hist_prepare(const std::vector<uint64_t> &values,
@@ -203,10 +203,10 @@ protected:
 
 class TextOutput : public Output {
 public:
-  explicit TextOutput(CDefinitions &c_definitions,
+  explicit TextOutput(EnumRegistry &enums,
                       std::ostream &out = std::cout,
                       std::ostream &err = std::cerr)
-      : Output(c_definitions, out, err)
+      : Output(enums, out, err)
   {
   }
 
@@ -277,10 +277,10 @@ protected:
 
 class JsonOutput : public Output {
 public:
-  explicit JsonOutput(CDefinitions &c_definitions,
+  explicit JsonOutput(EnumRegistry &enums,
                       std::ostream &out = std::cout,
                       std::ostream &err = std::cerr)
-      : Output(c_definitions, out, err)
+      : Output(enums, out, err)
   {
   }
 

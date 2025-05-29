@@ -6,6 +6,7 @@
 
 #include "aot.h"
 #include "bpftrace.h"
+#include "enums.h"
 #include "log.h"
 #include "output.h"
 #include "run_bpftrace.h"
@@ -46,14 +47,14 @@ std::unique_ptr<Output> prepare_output(const std::string& output_file,
     os = &outputstream;
   }
 
-  // FIXME(#4087): We should serialize the C enum definitions as part of the AOT
+  // FIXME(#4087): We should serialize the enum definitions as part of the AOT
   // payload in order to allow this printing to work.
-  CDefinitions c_definitions;
+  EnumRegistry enums;
   std::unique_ptr<Output> output;
   if (output_format.empty() || output_format == "text") {
-    output = std::make_unique<TextOutput>(c_definitions, *os);
+    output = std::make_unique<TextOutput>(enums, *os);
   } else if (output_format == "json") {
-    output = std::make_unique<JsonOutput>(c_definitions, *os);
+    output = std::make_unique<JsonOutput>(enums, *os);
   } else {
     LOG(ERROR) << "Invalid output format \"" << output_format << "\"\n"
                << "Valid formats: 'text', 'json'";

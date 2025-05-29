@@ -367,16 +367,12 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
           }
 
           // bpftrace represents enums as unsigned integers
-          const auto &c_definitions = output.c_definitions();
           if (arg.type.IsEnumTy()) {
             auto enum_name = arg.type.GetName();
-            if (c_definitions.enum_defs.contains(enum_name) &&
-                c_definitions.enum_defs.find(enum_name)->second.contains(val)) {
+            if (auto enumerator_name = enums.lookup(enum_name, val); enumerator_name.has_value()) {
               arg_values.push_back(std::make_unique<PrintableEnum>(
                   val,
-                  c_definitions.enum_defs.find(enum_name)
-                      ->second.find(val)
-                      ->second));
+                  *enumerator_name));
             } else {
               arg_values.push_back(
                   std::make_unique<PrintableEnum>(val, std::to_string(val)));

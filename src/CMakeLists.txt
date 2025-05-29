@@ -6,6 +6,7 @@ add_library(required_resources required_resources.cpp)
 add_dependencies(required_resources parser)
 
 add_library(compiler_core STATIC
+  enums.cpp
   functions.cpp
   struct.cpp
   types.cpp

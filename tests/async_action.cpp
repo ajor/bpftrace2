@@ -2,6 +2,7 @@
 #include "ast/async_event_types.h"
 #include "attached_probe.h"
 #include "bpftrace.h"
+#include "enums.h"
 #include "location.hh"
 #include "mocks.h"
 #include "types.h"
@@ -106,9 +107,9 @@ std::string handler_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
     (fill_arg_data(arg_data.data(), offset, args), ...);
   }
 
-  CDefinitions no_c_defs;
+  EnumRegistry enums;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
+  TextOutput output(enums, out);
 
   static_assert((id == AsyncAction::syscall || id == AsyncAction::cat ||
                  id == AsyncAction::printf) &&
@@ -149,9 +150,9 @@ TEST(async_action, join)
   memcpy(join->content + bpftrace->join_argsize_, arg2, strlen(arg2) + 1);
   memcpy(join->content + (2 * bpftrace->join_argsize_), arg3, strlen(arg3) + 1);
 
-  CDefinitions no_c_defs;
+  EnumRegistry enums;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
+  TextOutput output(enums, out);
 
   join_handler(*bpftrace, output, join);
   EXPECT_EQ("/bin/ls,-la,/tmp\n", out.str());
@@ -161,9 +162,9 @@ TEST(async_action, time)
 {
   auto bpftrace = get_mock_bpftrace();
 
-  CDefinitions no_c_defs;
+  EnumRegistry enums;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
+  TextOutput output(enums, out);
 
   bpftrace->resources.time_args.emplace_back("%Y-%m-%d");
   bpftrace->resources.time_args.emplace_back("%H:%M:%S");
@@ -203,9 +204,9 @@ TEST(async_action, time_invalid_format)
 {
   auto bpftrace = get_mock_bpftrace();
 
-  CDefinitions no_c_defs;
+  EnumRegistry enums;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
+  TextOutput output(enums, out);
 
   // invalid time format string
   std::string very_long_format(bpftrace::async_action::MAX_TIME_STR_LEN, 'X');
@@ -270,9 +271,9 @@ TEST(async_action, helper_error)
   for (const auto &tc : test_cases) {
     auto bpftrace = get_mock_bpftrace();
 
-    CDefinitions no_c_defs;
+    EnumRegistry enums;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    TextOutput output(enums, out);
 
     auto src_loc = ast::SourceLocation(
         location(&tc.filename, tc.line, tc.column));
@@ -442,9 +443,9 @@ TEST(async_action, print_non_map)
   };
 
   for (const auto &tc : test_cases) {
-    CDefinitions no_c_defs;
+    EnumRegistry enums;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    TextOutput output(enums, out);
     auto bpftrace = get_mock_bpftrace();
 
     bpftrace->resources.non_map_print_args.emplace_back(tc.type);
@@ -466,7 +467,6 @@ TEST(async_action, print_non_map)
 
 TEST(async_action, watchpoint_attach_out_of_bound)
 {
-  CDefinitions no_c_defs;
   std::stringstream out;
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
@@ -488,7 +488,6 @@ TEST(async_action, watchpoint_attach_out_of_bound)
 
 TEST(async_action, watchpoint_attach_duplicated_address)
 {
-  CDefinitions no_c_defs;
   std::stringstream out;
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
@@ -506,7 +505,6 @@ TEST(async_action, watchpoint_attach_duplicated_address)
 
 TEST(async_action, watchpoint_attach_probe_error)
 {
-  CDefinitions no_c_defs;
   std::stringstream out;
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
@@ -548,7 +546,6 @@ TEST(async_action, watchpoint_attach_resume_tracee_failed)
 
 TEST(async_action, asyncwatchpoint_attach_ignore_duplicated_addr)
 {
-  CDefinitions no_c_defs;
   std::stringstream out;
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;

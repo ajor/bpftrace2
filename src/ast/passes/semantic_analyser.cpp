@@ -112,13 +112,11 @@ class SemanticAnalyser : public Visitor<SemanticAnalyser> {
 public:
   explicit SemanticAnalyser(ASTContext &ctx,
                             BPFtrace &bpftrace,
-                            CDefinitions &c_definitions,
                             MapMetadata &map_metadata,
                             bool has_child = true,
                             bool listing = false)
       : ctx_(ctx),
         bpftrace_(bpftrace),
-        c_definitions_(c_definitions),
         map_metadata_(map_metadata),
         listing_(listing),
         has_child_(has_child)
@@ -166,7 +164,6 @@ private:
   ASTContext &ctx_;
   PassTracker pass_tracker_;
   BPFtrace &bpftrace_;
-  CDefinitions &c_definitions_;
   MapMetadata &map_metadata_;
   bool listing_;
 
@@ -731,9 +728,8 @@ void SemanticAnalyser::visit(String &string)
 
 void SemanticAnalyser::visit(Identifier &identifier)
 {
-  if (c_definitions_.enums.contains(identifier.ident)) {
-    const auto &enum_name = std::get<1>(c_definitions_.enums[identifier.ident]);
-    identifier.ident_type = CreateEnum(64, enum_name);
+  if (auto enum_name = bpftrace_.enums.get_containing_enum(identifier.ident); enum_name) {
+    identifier.ident_type = CreateEnum(64, *enum_name);
   } else if (bpftrace_.structs.Has(identifier.ident)) {
     identifier.ident_type = CreateRecord(
         identifier.ident, bpftrace_.structs.Lookup(identifier.ident));
@@ -2896,12 +2892,11 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (cast.cast_type.IsEnumTy()) {
-    if (!c_definitions_.enum_defs.contains(cast.cast_type.GetName())) {
+    if (!bpftrace_.enums.contains(cast.cast_type.GetName())) {
       cast.addError() << "Unknown enum: " << cast.cast_type.GetName();
     } else {
       if (auto *integer = cast.expr.as<Integer>()) {
-        if (!c_definitions_.enum_defs[cast.cast_type.GetName()].contains(
-                integer->value)) {
+        if (!bpftrace_.enums.lookup(cast.cast_type.GetName(), integer->value)) {
           cast.addError() << "Enum: " << cast.cast_type.GetName()
                           << " doesn't contain a variant value of "
                           << integer->value;
@@ -4156,17 +4151,21 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
       }
     }
   }
+
+  // TODO needed at all?
+//  if (inner_type->IsEnumTy() && !bpftrace_.enums.contains(inner_type->GetName())) {
+//    // TODO
+//    //bpftrace_.enums.add();
+//  }
 }
 
 Pass CreateSemanticPass(bool listing)
 {
   auto fn = [listing](ASTContext &ast,
                       BPFtrace &b,
-                      CDefinitions &c_definitions,
                       MapMetadata &mm) {
     SemanticAnalyser semantics(ast,
                                b,
-                               c_definitions,
                                mm,
                                !b.cmd_.empty() || b.child_ != nullptr,
                                listing);

@@ -185,6 +185,7 @@ public:
   RequiredResources resources;
   BpfBytecode bytecode_;
   StructManager structs;
+  EnumRegistry enums;
   FunctionRegistry functions;
   // For each helper, list of all generated call sites.
   std::map<libbpf::bpf_func_id, std::vector<HelperErrorInfo>> helper_use_loc_;

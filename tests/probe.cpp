@@ -7,6 +7,7 @@
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
 #include "btf.h"
+#include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"

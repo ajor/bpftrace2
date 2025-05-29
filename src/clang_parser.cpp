@@ -465,7 +465,6 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 
     // Each anon enum must have a unique ID otherwise two variants
     // with different names but same value will clobber each other
-    // in enum_defs.
     static uint32_t anon_enum_count = 0;
     if (clang_getCursorKind(c) == CXCursor_EnumDecl)
       anon_enum_count++;
@@ -481,11 +480,8 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
       }
       auto variant_name = get_clang_string(clang_getCursorSpelling(c));
       auto variant_value = clang_getEnumConstantDeclValue(c);
-      definitions.enums[variant_name] = std::make_pair(variant_value,
-                                                       enum_name);
 
-      // Store enum name to variant value to variant name
-      definitions.enum_defs[enum_name][variant_value] = variant_name;
+      bpftrace.enums.add(enum_name, variant_name, variant_value);
 
       return CXChildVisit_Recurse;
     }

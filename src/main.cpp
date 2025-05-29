@@ -988,12 +988,11 @@ int main(int argc, char* argv[])
 
   // Our output requires the parsed C definitions in order to map enum values to
   // the suitable display name.
-  auto& c_definitions = pmresult->get<CDefinitions>();
   std::unique_ptr<Output> output;
   if (args.output_format.empty() || args.output_format == "text") {
-    output = std::make_unique<TextOutput>(c_definitions, *os);
+    output = std::make_unique<TextOutput>(bpftrace.enums, *os);
   } else if (args.output_format == "json") {
-    output = std::make_unique<JsonOutput>(c_definitions, *os);
+    output = std::make_unique<JsonOutput>(bpftrace.enums, *os);
   } else {
     LOG(ERROR) << "Invalid output format \"" << args.output_format << "\"\n"
                << "Valid formats: 'text', 'json'";
