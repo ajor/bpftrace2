@@ -1439,17 +1439,17 @@ Result<std::unique_ptr<AttachedIterProbe>> AttachedIterProbe::make(
                                   libbpf::BPF_TRACE_ITER),
                               nullptr);
   } else {
-    BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
-    union bpf_iter_link_info linfo;
-    memset(&linfo, 0, sizeof(linfo));
-    linfo.task.pid = *pid;
-    opts.iter_info = &linfo;
-    opts.iter_info_len = sizeof(linfo);
-    iter_fd = bpf_link_create(prog.fd(),
-                              0,
-                              static_cast<enum ::bpf_attach_type>(
-                                  libbpf::BPF_TRACE_ITER),
-                              &opts);
+//    BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+//    union bpf_iter_link_info linfo;
+//    memset(&linfo, 0, sizeof(linfo));
+//    linfo.task.pid = *pid;
+//    opts.iter_info = &linfo;
+//    opts.iter_info_len = sizeof(linfo);
+//    iter_fd = bpf_link_create(prog.fd(),
+//                              0,
+//                              static_cast<enum ::bpf_attach_type>(
+//                                  libbpf::BPF_TRACE_ITER),
+//                              &opts);
   }
 
   if (iter_fd < 0) {
