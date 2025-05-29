@@ -344,7 +344,7 @@ void FieldAnalyser::resolve_type(SizedType &type)
   const SizedType *inner_type = &type;
   while (inner_type->IsPtrTy())
     inner_type = inner_type->GetPointeeTy();
-  if (!inner_type->IsRecordTy())
+  if (!inner_type->IsRecordTy() && !inner_type->IsEnumTy())
     return;
   const auto &name = inner_type->GetName();
 

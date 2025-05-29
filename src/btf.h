@@ -106,6 +106,7 @@ public:
   std::shared_ptr<Struct> resolve_raw_tracepoint_args(std::string_view func,
                                                       std::string& err);
   void resolve_fields(const SizedType& type);
+  SizedType resolve_enum(struct btf *btf, const struct btf_type *t);
 
   int get_btf_id(std::string_view func,
                  std::string_view mod,
