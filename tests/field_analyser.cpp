@@ -130,6 +130,45 @@ TEST_F(field_analyser_btf, btf_types)
   EXPECT_EQ(foo2_field.offset, 8);
 }
 
+TEST_F(field_analyser_btf, btf_enums_by_enum_name)
+{
+  auto bpftrace = get_mock_bpftrace();
+  test(*bpftrace,
+       "kprobe:sys_read {\n"
+       "  @x = (enum MyEnum)0;\n"
+       "}",
+       true);
+
+  EXPECT_TRUE(bpftrace->enums.contains("MyEnum"));
+
+  ASSERT_TRUE(bpftrace->enums.lookup("MyEnum", 0).has_value());
+  ASSERT_TRUE(bpftrace->enums.lookup("MyEnum", 1).has_value());
+  ASSERT_TRUE(bpftrace->enums.lookup("MyEnum", 2).has_value());
+
+  EXPECT_EQ(bpftrace->enums.lookup("MyEnum", 0)->get(), "ENUMERATOR_A");
+  EXPECT_EQ(bpftrace->enums.lookup("MyEnum", 1)->get(), "ENUMERATOR_B");
+  EXPECT_EQ(bpftrace->enums.lookup("MyEnum", 2)->get(), "ENUMERATOR_C");
+
+  ASSERT_TRUE(bpftrace->enums.get_value("ENUMERATOR_A").has_value());
+  ASSERT_TRUE(bpftrace->enums.get_value("ENUMERATOR_B").has_value());
+  ASSERT_TRUE(bpftrace->enums.get_value("ENUMERATOR_C").has_value());
+
+  EXPECT_EQ(*bpftrace->enums.get_value("ENUMERATOR_A"), 0);
+  EXPECT_EQ(*bpftrace->enums.get_value("ENUMERATOR_B"), 1);
+  EXPECT_EQ(*bpftrace->enums.get_value("ENUMERATOR_C"), 2);
+
+  ASSERT_TRUE(bpftrace->enums.get_containing_enum("ENUMERATOR_A").has_value());
+  ASSERT_TRUE(bpftrace->enums.get_containing_enum("ENUMERATOR_B").has_value());
+  ASSERT_TRUE(bpftrace->enums.get_containing_enum("ENUMERATOR_C").has_value());
+
+  EXPECT_EQ(bpftrace->enums.get_containing_enum("ENUMERATOR_A")->get(),
+            "MyEnum");
+  EXPECT_EQ(bpftrace->enums.get_containing_enum("ENUMERATOR_B")->get(),
+            "MyEnum");
+  EXPECT_EQ(bpftrace->enums.get_containing_enum("ENUMERATOR_C")->get(),
+            "MyEnum");
+}
+
 TEST_F(field_analyser_btf, btf_arrays)
 {
   auto bpftrace = get_mock_bpftrace();

@@ -51,6 +51,15 @@ struct Foo3 *__attribute__((noinline)) func_3(int a, int *b, struct Foo1 *foo1)
   return 0;
 }
 
+enum MyEnum {
+  ENUMERATOR_A,
+  ENUMERATOR_B,
+  ENUMERATOR_C,
+};
+
+void func_enum(enum MyEnum e) {
+}
+
 struct FirstFieldsAreAnonUnion {
   union {
     int a;
