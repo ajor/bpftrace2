@@ -151,7 +151,7 @@ public:
                                   uint64_t cgroup_id) const;
   std::string resolve_probe(uint64_t probe_id) const;
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(
-      Output &output,
+      Output &output, // TODO remove this in a separate commit
       const std::vector<Field> &args,
       uint8_t *arg_data);
   void add_param(const std::string &param);
