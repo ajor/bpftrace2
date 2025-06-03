@@ -57,7 +57,28 @@ enum MyEnum {
   ENUMERATOR_C,
 };
 
-void func_enum(enum MyEnum e) {
+enum MyEnum64 {
+  ENUM64_A = 0x1000000000000000, // require this enum to be 64-bits wide
+  ENUM64_B,
+};
+
+// Two anonymous enums with some enumerators sharing the values - we want to
+// ensure that there are no conflicts
+enum {
+  ANON_A_0,
+  ANON_A_1,
+  ANON_A_99 = 99,
+};
+
+enum {
+  ANON_B_0,
+  ANON_B_99 = 99,
+};
+
+void func_enum(enum MyEnum, enum MyEnum64) {
+  // reference the anonymous enums to get them included in the debug info
+  ANON_A_0;
+  ANON_B_0;
 }
 
 struct FirstFieldsAreAnonUnion {

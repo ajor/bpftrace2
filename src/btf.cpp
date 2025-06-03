@@ -423,8 +423,10 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   if (btf_is_int(t)) {
     stype = CreateInteger(btf_int_bits(t),
                           btf_int_encoding(t) & BTF_INT_SIGNED);
-  } else if (btf_is_enum(t)) { // TODO also enum64 (use btf_is_any_enum ?)
+  } else if (btf_is_enum(t)) {
     stype = resolve_enum(btf_id.btf, t);
+  } else if (btf_is_enum64(t)) {
+    stype = resolve_enum64(btf_id.btf, t);
   } else if (btf_is_composite(t)) {
     std::string cast = btf_str(btf_id.btf, t->name_off);
     if (cast.empty() || cast == "(anon)")
@@ -1071,11 +1073,33 @@ SizedType BTF::resolve_enum(struct btf *btf, const struct btf_type *t)
   std::string enum_name = btf_str(btf, t->name_off);
 
   auto *enums = btf_enum(t);
+
   for (__u32 i = 0; i < BTF_INFO_VLEN(t->info); i++) {
     std::string enumerator_name = btf__name_by_offset(btf, enums[i].name_off);
-    auto val = enums[i].val;
+    uint64_t val = enums[i].val;
 
-    // TODO handle anon enums, don't let them clobber each other
+    // TODO handle anonymous enums - they must be given unique names so that
+    // they don't clobber each other. This isn't necessary right now, as we
+    // currently pass off enumerators to ClangParser rather than handling them
+    // directly here.
+
+    bpftrace_->enums.add(enum_name, enumerator_name, val);
+  }
+
+  return CreateEnum(t->size * 8, enum_name);
+}
+
+SizedType BTF::resolve_enum64(struct btf *btf, const struct btf_type *t)
+{
+  std::string enum_name = btf_str(btf, t->name_off);
+
+  auto *enums = btf_enum64(t);
+
+  for (__u32 i = 0; i < BTF_INFO_VLEN(t->info); i++) {
+    std::string enumerator_name = btf__name_by_offset(btf, enums[i].name_off);
+    uint64_t val = btf_enum64_value(&enums[i]);
+
+    // TODO handle anonymous enums - see comment in resolve_enum for details
 
     bpftrace_->enums.add(enum_name, enumerator_name, val);
   }
