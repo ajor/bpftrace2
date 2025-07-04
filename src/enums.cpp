@@ -6,9 +6,11 @@ bool EnumRegistry::add(const std::string &enum_name,
          const std::string &enumerator_name,
          uint64_t val)
 {
-  // TODO return error if duplicates are added
-  enum_defs_[enum_name].insert({val, enumerator_name});
-  enumerators_.insert({enumerator_name, {val, enum_name}});
+  // Returns false if this new entry clashes with an existing entry
+  if (!enum_defs_[enum_name].insert({val, enumerator_name}).second)
+    return false;
+  if (!enumerators_.insert({enumerator_name, {val, enum_name}}).second)
+    return false;
   return true;
 }
 

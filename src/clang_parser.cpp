@@ -481,7 +481,10 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
       auto variant_name = get_clang_string(clang_getCursorSpelling(c));
       auto variant_value = clang_getEnumConstantDeclValue(c);
 
-      bpftrace.enums.add(enum_name, variant_name, variant_value);
+      if (!bpftrace.enums.add(enum_name, variant_name, variant_value)) {
+        LOG(ERROR) << "Duplicate enum encountered in ClangParser: " << enum_name  << ", " << variant_name << ", " << variant_value;
+        return CXChildVisit_Break;
+      }
 
       return CXChildVisit_Recurse;
     }

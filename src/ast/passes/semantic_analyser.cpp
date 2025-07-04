@@ -4151,12 +4151,6 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
       }
     }
   }
-
-  // TODO needed at all?
-//  if (inner_type->IsEnumTy() && !bpftrace_.enums.contains(inner_type->GetName())) {
-//    // TODO
-//    //bpftrace_.enums.add();
-//  }
 }
 
 Pass CreateSemanticPass(bool listing)
