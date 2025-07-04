@@ -1,0 +1,12 @@
+fentry:autofs4:autofs_wait, BEGIN
+{
+  @a = (enum autofs_notify)0;
+  @b = (enum autofs_notify)1;
+  @c = (enum autofs_notify)2;
+  $three = 3;
+  @d = (enum autofs_notify)$three;
+
+//  @x = NFY_NONE;
+//  @y = NFY_MOUNT;
+//  @z = NFY_EXPIRE;
+}
